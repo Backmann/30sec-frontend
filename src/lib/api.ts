@@ -155,6 +155,24 @@ class ApiClient {
   async finishTournament(id: string) {
     return this.request<any>(`/tournaments/${id}/finish`, { method: 'POST' });
   }
+  async deleteTournament(id: string) {
+    return this.request<any>(`/tournaments/${id}`, { method: 'DELETE' });
+  }
+  async launchQuestion(id: string) {
+    return this.request<any>(`/tournaments/${id}/launch-question`, { method: 'POST' });
+  }
+  async approveParticipant(pid: string) {
+    return this.request<any>(`/tournaments/participants/${pid}/approve`, { method: 'POST' });
+  }
+  async rejectParticipant(pid: string) {
+    return this.request<any>(`/tournaments/participants/${pid}/reject`, { method: 'POST' });
+  }
+  async getGameState(id: string) {
+    return this.request<any>(`/tournaments/${id}/game-state`);
+  }
+  async fillTestQuestions(id: string) {
+    return this.request<any>(`/tournaments/${id}/fill-test-questions`, { method: 'POST' });
+  }
   async getCurrentQuestion(id: string) {
     return this.request<any>(`/tournaments/${id}/current-question`);
   }
@@ -194,6 +212,9 @@ class ApiClient {
     return this.request<any>('/judgements', {
       method: 'POST', body: JSON.stringify({ answerId, decision, reasonCode }),
     });
+  }
+  async undoJudgement(judgementId: string) {
+    return this.request<any>(`/judgements/${judgementId}/undo`, { method: 'DELETE' });
   }
 
   // ─── Spectator ────────────────────────────────

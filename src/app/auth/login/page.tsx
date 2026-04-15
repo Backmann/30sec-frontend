@@ -72,6 +72,9 @@ export default function LoginPage() {
               onChange={(e) => { setPassword(e.target.value); clearError(); }}
               className="input-field" placeholder="••••••••" required
             />
+            <Link href="/auth/forgot-password" className="text-brand-400/60 hover:text-brand-400 text-xs mt-1 inline-block transition-colors">
+              Забыли пароль?
+            </Link>
           </div>
 
           <button type="submit" disabled={loading}
