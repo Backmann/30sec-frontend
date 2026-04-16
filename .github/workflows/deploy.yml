@@ -1,0 +1,38 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            set -e
+            cd /root/30sec-frontend
+            echo "-> Pulling latest code..."
+            git pull origin main
+            cd /root/30sec
+            echo "-> Rebuilding frontend container..."
+            docker compose up -d --build frontend
+            echo "-> Waiting for health check..."
+            sleep 40
+            STATUS=$(docker inspect --format='{{.State.Health.Status}}' 30sec-frontend)
+            if [ "$STATUS" = "healthy" ]; then
+              echo "OK: Frontend is healthy!"
+            else
+              echo "FAIL: Frontend status: $STATUS"
+              docker compose logs frontend --tail 30
+              exit 1
+            fi
