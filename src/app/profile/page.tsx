@@ -280,6 +280,51 @@ export default function ProfilePage() {
               </div>
             </div>
 
+            <div className="card mt-4">
+              <h3 className="text-white font-semibold mb-3">Мои данные (GDPR)</h3>
+              <p className="text-white/40 text-xs mb-4">Согласно GDPR, вы имеете право скачать свои данные или удалить аккаунт в любой момент.</p>
+              <div className="space-y-2">
+                <button onClick={async () => {
+                  try {
+                    const token = localStorage.getItem('accessToken');
+                    const res = await fetch((process.env.NEXT_PUBLIC_API_URL || '/api') + '/me/gdpr/export', {
+                      headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (!res.ok) throw new Error('Export failed');
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `30sec-data-${new Date().toISOString().split('T')[0]}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  } catch(e:any) { alert('Ошибка экспорта: ' + e.message); }
+                }} className="btn-secondary text-sm w-full text-center">
+                  Скачать мои данные (JSON)
+                </button>
+                <button onClick={async () => {
+                  const pwd = prompt('Для подтверждения удаления введите ваш пароль:');
+                  if (!pwd) return;
+                  if (!confirm('Вы УВЕРЕНЫ что хотите удалить аккаунт? Это действие необратимо.\n\nВаша история турниров будет анонимизирована, но сохранена для целостности данных.')) return;
+                  try {
+                    const token = localStorage.getItem('accessToken');
+                    const res = await fetch((process.env.NEXT_PUBLIC_API_URL || '/api') + '/me/gdpr/delete-account', {
+                      method: 'POST',
+                      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ confirmPassword: pwd })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.message?.[0] || data.message || 'Ошибка');
+                    alert('Аккаунт удалён. Вы будете перенаправлены на главную.');
+                    logout();
+                    router.push('/');
+                  } catch(e:any) { alert('Ошибка: ' + e.message); }
+                }} className="text-sm w-full text-center px-4 py-2.5 rounded-2xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 font-medium">
+                  Удалить аккаунт
+                </button>
+              </div>
+            </div>
+
             <div className="card mt-4 border-red-500/10">
               <button onClick={() => { logout(); router.push('/'); }} className="btn-danger text-sm w-full text-center">
                 {t.nav.logout}

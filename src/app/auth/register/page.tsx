@@ -28,13 +28,13 @@ export default function RegisterPage() {
   const [mounted, setMounted] = useState(false);
 
   const [form, setForm] = useState({
-    email: '', password: '', firstName: '', lastName: '',
+    email: '', password: '', firstName: '', lastName: '', agreedToTerms: false,
     nickname: '', countryCode: 'DE',
   });
 
   useEffect(() => { setMounted(true); }, []);
 
-  const update = (field: string, value: string) => {
+  const update = (field: string, value: any) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     clearError();
   };
@@ -116,7 +116,13 @@ export default function RegisterPage() {
             </select>
           </div>
 
-          <button type="submit" disabled={loading}
+          <label className="flex items-start gap-2 text-xs text-white/60 cursor-pointer">
+            <input type="checkbox" checked={form.agreedToTerms} onChange={(e) => update('agreedToTerms', e.target.checked)}
+              className="mt-0.5 w-4 h-4 rounded accent-brand-500 cursor-pointer" />
+            <span>Я согласен с <Link href="/terms" target="_blank" className="text-brand-400 hover:text-brand-300 underline">условиями использования</Link> и <Link href="/privacy" target="_blank" className="text-brand-400 hover:text-brand-300 underline">политикой конфиденциальности</Link></span>
+          </label>
+
+          <button type="submit" disabled={loading || !form.agreedToTerms}
             className="btn-primary w-full text-center justify-center text-base">
             {loading ? (
               <span className="flex items-center justify-center gap-2">
