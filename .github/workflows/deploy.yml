@@ -26,13 +26,21 @@ jobs:
             cd /root/30sec
             echo "-> Rebuilding frontend container..."
             docker compose up -d --build frontend
-            echo "-> Waiting for health check..."
-            sleep 40
-            STATUS=$(docker inspect --format='{{.State.Health.Status}}' 30sec-frontend)
-            if [ "$STATUS" = "healthy" ]; then
-              echo "OK: Frontend is healthy!"
-            else
-              echo "FAIL: Frontend status: $STATUS"
-              docker compose logs frontend --tail 30
-              exit 1
-            fi
+            echo "-> Waiting for health check (up to 90s)..."
+            for i in {1..9}; do
+              sleep 10
+              STATUS=$(docker inspect --format='{{.State.Health.Status}}' 30sec-frontend 2>/dev/null || echo "unknown")
+              echo "Check $i: $STATUS"
+              if [ "$STATUS" = "healthy" ]; then
+                echo "OK: Frontend is healthy!"
+                exit 0
+              fi
+              if [ "$STATUS" = "unhealthy" ]; then
+                echo "FAIL: Frontend became unhealthy"
+                docker compose logs frontend --tail 30
+                exit 1
+              fi
+            done
+            echo "FAIL: Timeout waiting for healthy status"
+            docker compose logs frontend --tail 30
+            exit 1
