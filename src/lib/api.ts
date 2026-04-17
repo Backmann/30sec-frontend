@@ -243,6 +243,21 @@ class ApiClient {
   async getRanks() { return this.request<any[]>('/ranks'); }
   async getGlobalLeaderboard(limit = 50) { return this.request<any[]>(`/leaderboard?limit=${limit}`); }
 
+
+  // ─── Notifications ────────────────────────────
+  async getNotifications(page = 1) {
+    return this.request<any>(`/notifications?page=${page}`);
+  }
+  async getNotificationsUnreadCount() {
+    return this.request<{ count: number }>('/notifications/unread-count');
+  }
+  async markNotificationRead(id: string) {
+    return this.request<any>(`/notifications/${id}/read`, { method: 'POST' });
+  }
+  async markAllNotificationsRead() {
+    return this.request<any>('/notifications/read-all', { method: 'POST' });
+  }
+
   // ─── Admin ────────────────────────────────────
   async getAdminDashboard() { return this.request<any>('/admin/dashboard'); }
   async getAdminLogs(page = 1) { return this.request<any>(`/admin/logs?page=${page}`); }
