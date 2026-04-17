@@ -8,7 +8,7 @@ import { detectLocale, getTranslation } from '@/lib/i18n';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, loading, error, clearError } = useAuth();
+  const { login, googleLogin, loading, error, clearError } = useAuth();
   const [locale, setLocale] = useState(detectLocale());
   const t = getTranslation(locale);
   const [email, setEmail] = useState('');
@@ -21,6 +21,32 @@ export default function LoginPage() {
     e.preventDefault();
     try {
       await login(email, password);
+      router.push('/dashboard');
+    } catch {}
+  };
+
+
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    document.head.appendChild(script);
+    script.onload = () => {
+      (window as any).google?.accounts.id.initialize({
+        client_id: '949063231145-o9phc544r59dj63lbt9og35jcbi2og5m.apps.googleusercontent.com',
+        callback: handleGoogleResponse,
+      });
+      (window as any).google?.accounts.id.renderButton(
+        document.getElementById('google-signin-btn'),
+        { theme: 'filled_black', size: 'large', width: '100%', text: 'signin_with', locale: locale === 'ru' ? 'ru' : 'de' }
+      );
+    };
+    return () => { script.remove(); };
+  }, [mounted]);
+
+  const handleGoogleResponse = async (response: any) => {
+    try {
+      await googleLogin(response.credential);
       router.push('/dashboard');
     } catch {}
   };
@@ -90,7 +116,12 @@ export default function LoginPage() {
             ) : t.auth.loginBtn}
           </button>
 
+
+          {/* Google Sign-In */}
+          <div id="google-signin-btn" className="flex justify-center" />
+
           <div className="divider" />
+
 
           <p className="text-center text-white/30 text-sm">
             {t.auth.noAccount}{' '}

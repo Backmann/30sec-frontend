@@ -18,7 +18,7 @@ export default function ProfilePage() {
   const [tab, setTab] = useState<'stats' | 'answers' | 'tournaments' | 'settings'>('stats');
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
-  const [editForm, setEditForm] = useState({ firstName: '', lastName: '', language: '', showRealName: false });
+  const [editForm, setEditForm] = useState({ nickname: '', firstName: '', lastName: '', language: '', showRealName: false });
   const [saveMsg, setSaveMsg] = useState('');
 
   useEffect(() => {
@@ -40,6 +40,7 @@ export default function ProfilePage() {
   useEffect(() => {
     if (profile?.profile) {
       setEditForm({
+        nickname: profile.profile.nickname || '',
         firstName: profile.profile.firstName || '',
         lastName: profile.profile.lastName || '',
         language: profile.profile.language || 'ru',
@@ -237,6 +238,13 @@ export default function ProfilePage() {
         {tab === 'settings' && (
           <div className="animate-fade-in">
             <div className="card space-y-4">
+              <div>
+                <label className="input-label">Никнейм</label>
+                <input type="text" value={editForm.nickname} onChange={(e) => setEditForm({...editForm, nickname: e.target.value})}
+                  className="input-field" disabled={!editMode} placeholder="my_nickname" />
+                <p className="text-white/20 text-[10px] mt-1">Буквы, цифры и _ (3-20 символов). Можно менять раз в 30 дней.</p>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="input-label">{t.auth.firstName}</label>

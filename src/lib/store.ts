@@ -20,6 +20,7 @@ interface AuthState {
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   register: (data: any) => Promise<void>;
+  googleLogin: (credential: string) => Promise<void>;
   logout: () => void;
   loadUser: () => Promise<void>;
   clearError: () => void;
@@ -52,6 +53,16 @@ export const useAuth = create<AuthState>((set) => ({
     }
   },
 
+  googleLogin: async (credential) => {
+    set({ loading: true, error: null });
+    try {
+      const result = await api.googleLogin(credential);
+      set({ user: result.user, loading: false });
+    } catch (err: any) {
+      set({ error: err.message, loading: false });
+      throw err;
+    }
+  },
   logout: () => {
     api.logout();
     set({ user: null });
