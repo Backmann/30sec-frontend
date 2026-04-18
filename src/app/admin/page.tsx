@@ -189,7 +189,7 @@ export default function AdminPage() {
   const wk = new Date(Date.now()-7*86400000).toISOString();
   const active = tournaments.filter(t => ['LIVE','SCHEDULED','DRAFT'].includes(t.status));
   const fin = tournaments.filter(t => { if (t.status !== 'FINISHED') return false; const d = t.endAt || t.createdAt; if (fFrom && new Date(d)<new Date(fFrom)) return false; if (fTo && new Date(d)>new Date(fTo+'T23:59:59')) return false; if (!fFrom && !fTo) return new Date(d)>new Date(wk); return true; });
-  const tabs: {id:Tab;icon:string;label:string}[] = [{id:'dashboard',icon:'D',label:'Dashboard'},{id:'tournaments',icon:'T',label:'Tournaments'},{id:'questions',icon:'Q',label:'Questions'},{id:'judge',icon:'J',label:'Judge'},{id:'users',icon:'U',label:'Players'},{id:'logs',icon:'L',label:'Logs'}];
+  const tabs: {id:Tab;icon:string;label:string}[] = [{id:'dashboard',icon:'D',label:'Дашборд'},{id:'tournaments',icon:'T',label:'Турниры'},{id:'questions',icon:'Q',label:'Вопросы'},{id:'judge',icon:'J',label:'Судейство'},{id:'users',icon:'U',label:'Игроки'},{id:'logs',icon:'L',label:'Журнал'}];
   const qc = (t: any) => t.tournamentQuestions?.length || 0;
   const qr = (t: any) => qc(t) >= RQ;
   const apprd = (t: any) => (t.participants || []).filter((p: any) => p.matchStatus === 'APPROVED' || p.matchStatus === 'PLAYING').length;
@@ -211,43 +211,174 @@ export default function AdminPage() {
         <nav className="hidden lg:block w-48 shrink-0 space-y-1">{tabs.map(t => <button key={t.id} onClick={() => setTab(t.id)} className={`w-full text-left px-4 py-2.5 rounded-2xl text-sm flex items-center gap-2.5 ${tab===t.id?'bg-brand-500/10 text-brand-400 font-semibold':'text-white/40 hover:text-white hover:bg-white/5'}`}>{t.label}</button>)}</nav>
         {mob && <div className="fixed inset-0 z-40 lg:hidden" onClick={() => setMob(false)}><div className="absolute inset-0 bg-black/60 backdrop-blur-sm" /><div className="absolute left-0 top-14 w-64 bg-dark-800 border-r border-white/[0.06] h-full p-4 space-y-1">{tabs.map(t => <button key={t.id} onClick={() => { setTab(t.id); setMob(false); }} className={`w-full text-left px-4 py-3 rounded-2xl text-sm flex items-center gap-3 ${tab===t.id?'bg-brand-500/10 text-brand-400 font-semibold':'text-white/50'}`}>{t.label}</button>)}</div></div>}
         <div className="flex-1 min-w-0">
-          {tab === 'dashboard' && dashboard && <div className="animate-fade-in"><h2 className="text-xl font-bold text-white mb-5">Dashboard</h2><div className="grid grid-cols-2 sm:grid-cols-3 gap-3">{[{l:'Players',v:dashboard.totalUsers,c:'text-brand-400',b:'from-brand-600/10'},{l:'Tournaments',v:dashboard.totalTournaments,c:'text-accent-400',b:'from-accent-500/10'},{l:'Live',v:dashboard.liveTournaments,c:'text-red-400',b:'from-red-500/10'},{l:'Questions',v:dashboard.totalQuestions,c:'text-green-400',b:'from-green-500/10'},{l:'Answers',v:dashboard.totalAnswers,c:'text-purple-400',b:'from-purple-500/10'},{l:'Judgements',v:dashboard.totalJudgements,c:'text-cyan-400',b:'from-cyan-500/10'}].map(s=><div key={s.l} className={`card text-center bg-gradient-to-b ${s.b} to-transparent`}><div className={`text-3xl font-black font-mono ${s.c}`}>{s.v}</div><div className="text-white/30 text-xs mt-1">{s.l}</div></div>)}</div></div>}
+          {tab === 'dashboard' && dashboard && <div className="animate-fade-in space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">Дашборд</h2>
+              <div className="text-white/30 text-xs">Обновлено: сейчас</div>
+            </div>
+
+            {/* Требует внимания */}
+            {(dashboard.pendingApplications > 0 || dashboard.upcomingTournaments?.some((t:any)=>!t.ready)) && (
+              <div className="card border-amber-500/30 bg-amber-500/5">
+                <h3 className="text-amber-400 font-semibold mb-3 flex items-center gap-2"><span>⚠️</span> Требует внимания</h3>
+                <div className="space-y-2 text-sm">
+                  {dashboard.pendingApplications > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-white/70">Заявок ожидают одобрения: <span className="font-bold text-amber-400">{dashboard.pendingApplications}</span></span>
+                      <button onClick={() => setTab('tournaments')} className="text-xs text-amber-400 hover:underline">Перейти →</button>
+                    </div>
+                  )}
+                  {dashboard.upcomingTournaments?.filter((t:any)=>!t.ready).map((t:any) => (
+                    <div key={t.id} className="flex items-center justify-between">
+                      <span className="text-white/70">«{t.title}» — вопросов {t.questionsCount}/{t.questionsRequired}</span>
+                      <button onClick={() => setTab('questions')} className="text-xs text-amber-400 hover:underline">Дополнить →</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Быстрые действия */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <button onClick={() => setTab('tournaments')} className="card-hover text-left group">
+                <div className="text-2xl mb-2">🏆</div>
+                <div className="text-white font-semibold">Создать турнир</div>
+                <div className="text-white/30 text-xs mt-1">Новый турнир с датой и временем</div>
+              </button>
+              <button onClick={() => setTab('questions')} className="card-hover text-left group">
+                <div className="text-2xl mb-2">❓</div>
+                <div className="text-white font-semibold">Добавить вопросы</div>
+                <div className="text-white/30 text-xs mt-1">Для предстоящих турниров</div>
+              </button>
+              <button onClick={() => setTab('judge')} className="card-hover text-left group">
+                <div className="text-2xl mb-2">⚖️</div>
+                <div className="text-white font-semibold">Перейти в судейство</div>
+                <div className="text-white/30 text-xs mt-1">Оценить ответы игроков</div>
+              </button>
+            </div>
+
+            {/* Статистика */}
+            <div>
+              <h3 className="section-title mb-3">Статистика</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {[
+                  {l:'Игроков',v:dashboard.totalUsers,c:'text-brand-400',b:'from-brand-600/10',sub: dashboard.newUsersToday > 0 ? `+${dashboard.newUsersToday} сегодня` : null},
+                  {l:'Турниров',v:dashboard.totalTournaments,c:'text-accent-400',b:'from-accent-500/10'},
+                  {l:'Идут сейчас',v:dashboard.liveTournaments,c:'text-red-400',b:'from-red-500/10'},
+                  {l:'Вопросов',v:dashboard.totalQuestions,c:'text-green-400',b:'from-green-500/10'},
+                  {l:'Ответов',v:dashboard.totalAnswers,c:'text-purple-400',b:'from-purple-500/10'},
+                  {l:'Судейств',v:dashboard.totalJudgements,c:'text-cyan-400',b:'from-cyan-500/10'},
+                ].map(s => (
+                  <div key={s.l} className={`card text-center bg-gradient-to-b ${s.b} to-transparent`}>
+                    <div className={`text-3xl font-black font-mono ${s.c}`}>{s.v}</div>
+                    <div className="text-white/30 text-xs mt-1">{s.l}</div>
+                    {s.sub && <div className="text-green-400/80 text-[10px] mt-1">{s.sub}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Live турниры */}
+            {dashboard.liveTournamentsList?.length > 0 && (
+              <div>
+                <h3 className="section-title mb-3 flex items-center gap-2"><span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" /> Идут сейчас</h3>
+                <div className="space-y-2">
+                  {dashboard.liveTournamentsList.map((t:any) => (
+                    <button key={t.id} onClick={() => setTab('judge')} className="card-hover w-full flex items-center justify-between">
+                      <div>
+                        <div className="text-white font-semibold">{t.title}</div>
+                        <div className="text-white/30 text-xs">{t.participantsCount} участников</div>
+                      </div>
+                      <span className="text-red-400 text-xs">⚖️ Судить →</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Предстоящие турниры */}
+            {dashboard.upcomingTournaments?.length > 0 && (
+              <div>
+                <h3 className="section-title mb-3">Предстоящие</h3>
+                <div className="space-y-2">
+                  {dashboard.upcomingTournaments.map((t:any) => {
+                    const startDate = new Date(t.startAt);
+                    return (
+                      <div key={t.id} className="card flex items-center justify-between">
+                        <div>
+                          <div className="text-white font-semibold">{t.title}</div>
+                          <div className="text-white/30 text-xs">{startDate.toLocaleString('ru-RU', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'})} · {t.participantsCount} заявок</div>
+                        </div>
+                        <span className={`text-xs font-mono ${t.ready ? 'text-green-400' : 'text-amber-400'}`}>{t.questionsCount}/{t.questionsRequired} {t.ready ? '✓' : ''}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Последняя активность */}
+            {dashboard.recentActivity?.length > 0 && (
+              <div>
+                <h3 className="section-title mb-3">Последняя активность</h3>
+                <div className="space-y-1">
+                  {dashboard.recentActivity.slice(0,5).map((a:any) => {
+                    const actionMap:any = {
+                      post_auth: 'вход в админку',
+                      post_tournaments: 'работа с турниром',
+                      post_questions: 'работа с вопросами',
+                      post_notifications: 'уведомления',
+                      delete_tournaments: 'удаление турнира',
+                      patch_tournaments: 'изменение турнира',
+                    };
+                    const label = actionMap[a.actionType] || a.actionType;
+                    return (
+                      <div key={a.id} className="text-white/50 text-xs flex items-center justify-between py-2 border-b border-white/[0.04]">
+                        <span><span className="text-white/70">{a.adminNickname}</span> — {label}</span>
+                        <span className="text-white/30">{new Date(a.createdAt).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>}
 
           {tab === 'tournaments' && <div className="animate-fade-in">
-            <div className="flex items-center justify-between mb-5"><h2 className="text-xl font-bold text-white">Tournaments</h2><button onClick={() => { setShowTF(true); setEditT(null); setTF({title:'',type:'WEEKLY',startAt:''}); }} className="btn-primary text-sm px-5 py-2.5">+ Create</button></div>
-            {(showTF||editT) && <div className="card mb-5 space-y-3 animate-slide-down"><h3 className="text-white font-semibold text-sm">{editT?'Edit':'+ New'}</h3><input value={tF.title} onChange={e=>setTF({...tF,title:e.target.value})} className="input-field" placeholder="Tournament name" autoFocus /><div className="grid grid-cols-2 gap-3"><div><label className="input-label">Type</label><select value={tF.type} onChange={e=>setTF({...tF,type:e.target.value})} className="input-field"><option value="WEEKLY">Weekly</option><option value="MONTHLY">Monthly</option><option value="SEASON">Season</option><option value="YEARLY">Yearly</option></select></div><div><label className="input-label">Start *</label><input type="datetime-local" value={tF.startAt} onChange={e=>setTF({...tF,startAt:e.target.value})} className="input-field" /></div></div><div className="flex gap-2"><button onClick={editT?doUpdateT:doCreateT} className="btn-primary text-sm">{editT?'Save':'Create'}</button><button onClick={()=>{setShowTF(false);setEditT(null);}} className="btn-ghost text-sm">Cancel</button></div></div>}
-            <h3 className="text-sm font-semibold text-white/40 mb-2">Active</h3>
-            {active.length===0?<div className="card text-center py-6 text-white/20 text-sm mb-6">None</div>:<div className="space-y-3 mb-6">{active.map(t=><div key={t.id} className="card space-y-3"><div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3"><div className="flex-1"><div className="flex items-center gap-2 flex-wrap"><span className="text-white font-semibold">{t.title}</span>{t.status==='DRAFT'&&<span className="badge-draft">DRAFT</span>}{t.status==='LIVE'&&<span className="badge-live">LIVE</span>}</div><div className="text-white/30 text-xs mt-1">{t.type}{t.startAt&&<span> | Start: {new Date(t.startAt).toLocaleString()}</span>}</div><div className="text-xs mt-1">{qr(t)?<span className="text-green-400">OK {qc(t)}/{RQ}</span>:<span className="text-amber-400">! {qc(t)}/{RQ} (need {RQ-qc(t)})</span>}</div><div className="text-xs mt-0.5 text-white/30">{apprd(t)} approved | {pend(t).length} pending</div></div><div className="flex items-center gap-2 flex-wrap">{(t.status==='DRAFT'||t.status==='SCHEDULED')&&<><button onClick={()=>doStartT(t.id)} disabled={busy===t.id||!canStart(t)} className={`text-xs px-4 py-2 rounded-2xl font-semibold ${canStart(t)?'btn-primary':'bg-white/5 text-white/20 cursor-not-allowed'}`}>{busy===t.id?'...':'Start'}</button><button onClick={()=>{setEditT(t);setShowTF(false);setTF({title:t.title,type:t.type,startAt:t.startAt?new Date(t.startAt).toISOString().slice(0,16):''});}} className="btn-ghost text-xs">Edit</button><button onClick={()=>doDeleteT(t.id,t.title)} className="btn-ghost text-xs text-red-400">Del</button></>}{t.status==='LIVE'&&<button onClick={()=>doFinishT(t.id)} className="btn-danger text-xs px-4 py-2">Finish</button>}</div></div>{pend(t).length>0&&<div className="border-t border-white/[0.06] pt-3"><h4 className="text-xs text-white/40 mb-2">Applications:</h4><div className="space-y-1">{pend(t).map((p:any)=><div key={p.id} className="flex items-center justify-between py-1"><span className="text-white/70 text-sm">{p.user?.profile?.nickname||p.userId}</span><div className="flex gap-1"><button onClick={()=>doApprove(p.id)} className="text-[10px] bg-green-500/20 text-green-400 px-3 py-1 rounded-lg">Approve</button><button onClick={()=>doReject(p.id)} className="text-[10px] bg-red-500/20 text-red-400 px-3 py-1 rounded-lg">Reject</button></div></div>)}</div></div>}</div>)}</div>}
-            <h3 className="text-sm font-semibold text-white/40 mb-2">Finished</h3>
-            <div className="flex gap-2 mb-3 items-center"><input type="date" value={fFrom} onChange={e=>setFFrom(e.target.value)} className="input-field text-xs py-2 w-36" /><span className="text-white/20 text-xs">-</span><input type="date" value={fTo} onChange={e=>setFTo(e.target.value)} className="input-field text-xs py-2 w-36" />{(fFrom||fTo)&&<button onClick={()=>{setFFrom('');setFTo('');}} className="btn-ghost text-xs">Reset</button>}</div>
-            {fin.length===0?<div className="card text-center py-6 text-white/20 text-sm">None</div>:<div className="space-y-2">{fin.map(t=><div key={t.id} className="card flex items-center justify-between opacity-60"><div><span className="text-white font-medium">{t.title}</span><span className="text-white/20 text-xs ml-2">{t.type}</span></div><div className="flex items-center gap-2"><span className="badge-finished">Done</span><button onClick={()=>doDeleteT(t.id,t.title)} className="btn-ghost text-xs text-red-400">Del</button></div></div>)}</div>}
+            <div className="flex items-center justify-between mb-5"><h2 className="text-xl font-bold text-white">Турниры</h2><button onClick={() => { setShowTF(true); setEditT(null); setTF({title:'',type:'WEEKLY',startAt:''}); }} className="btn-primary text-sm px-5 py-2.5">+ Create</button></div>
+            {(showTF||editT) && <div className="card mb-5 space-y-3 animate-slide-down"><h3 className="text-white font-semibold text-sm">{editT?'Edit':'+ New'}</h3><input value={tF.title} onChange={e=>setTF({...tF,title:e.target.value})} className="input-field" placeholder="Название турнира" autoFocus /><div className="grid grid-cols-2 gap-3"><div><label className="input-label">Тип</label><select value={tF.type} onChange={e=>setTF({...tF,type:e.target.value})} className="input-field"><option value="WEEKLY">Недельный</option><option value="MONTHLY">Месячный</option><option value="SEASON">Сезонный</option><option value="YEARLY">Годовой</option></select></div><div><label className="input-label">Start *</label><input type="datetime-local" value={tF.startAt} onChange={e=>setTF({...tF,startAt:e.target.value})} className="input-field" /></div></div><div className="flex gap-2"><button onClick={editT?doUpdateT:doCreateT} className="btn-primary text-sm">{editT?'Save':'Create'}</button><button onClick={()=>{setShowTF(false);setEditT(null);}} className="btn-ghost text-sm">Отмена</button></div></div>}
+            <h3 className="text-sm font-semibold text-white/40 mb-2">Активен</h3>
+            {active.length===0?<div className="card text-center py-6 text-white/20 text-sm mb-6">Нет</div>:<div className="space-y-3 mb-6">{active.map(t=><div key={t.id} className="card space-y-3"><div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3"><div className="flex-1"><div className="flex items-center gap-2 flex-wrap"><span className="text-white font-semibold">{t.title}</span>{t.status==='DRAFT'&&<span className="badge-draft">Черновик</span>}{t.status==='LIVE'&&<span className="badge-live">Идёт</span>}</div><div className="text-white/30 text-xs mt-1">{t.type}{t.startAt&&<span> | Start: {new Date(t.startAt).toLocaleString()}</span>}</div><div className="text-xs mt-1">{qr(t)?<span className="text-green-400">OK {qc(t)}/{RQ}</span>:<span className="text-amber-400">! {qc(t)}/{RQ} (need {RQ-qc(t)})</span>}</div><div className="text-xs mt-0.5 text-white/30">{apprd(t)} approved | {pend(t).length} pending</div></div><div className="flex items-center gap-2 flex-wrap">{(t.status==='DRAFT'||t.status==='SCHEDULED')&&<><button onClick={()=>doStartT(t.id)} disabled={busy===t.id||!canStart(t)} className={`text-xs px-4 py-2 rounded-2xl font-semibold ${canStart(t)?'btn-primary':'bg-white/5 text-white/20 cursor-not-allowed'}`}>{busy===t.id?'...':'Start'}</button><button onClick={()=>{setEditT(t);setShowTF(false);setTF({title:t.title,type:t.type,startAt:t.startAt?new Date(t.startAt).toISOString().slice(0,16):''});}} className="btn-ghost text-xs">Изменить</button><button onClick={()=>doDeleteT(t.id,t.title)} className="btn-ghost text-xs text-red-400">Удалить</button></>}{t.status==='LIVE'&&<button onClick={()=>doFinishT(t.id)} className="btn-danger text-xs px-4 py-2">Завершить</button>}</div></div>{pend(t).length>0&&<div className="border-t border-white/[0.06] pt-3"><h4 className="text-xs text-white/40 mb-2">Applications:</h4><div className="space-y-1">{pend(t).map((p:any)=><div key={p.id} className="flex items-center justify-between py-1"><span className="text-white/70 text-sm">{p.user?.profile?.nickname||p.userId}</span><div className="flex gap-1"><button onClick={()=>doApprove(p.id)} className="text-[10px] bg-green-500/20 text-green-400 px-3 py-1 rounded-lg">Одобрить</button><button onClick={()=>doReject(p.id)} className="text-[10px] bg-red-500/20 text-red-400 px-3 py-1 rounded-lg">Отклонить</button></div></div>)}</div></div>}</div>)}</div>}
+            <h3 className="text-sm font-semibold text-white/40 mb-2">Завершён</h3>
+            <div className="flex gap-2 mb-3 items-center"><input type="date" value={fFrom} onChange={e=>setFFrom(e.target.value)} className="input-field text-xs py-2 w-36" /><span className="text-white/20 text-xs">-</span><input type="date" value={fTo} onChange={e=>setFTo(e.target.value)} className="input-field text-xs py-2 w-36" />{(fFrom||fTo)&&<button onClick={()=>{setFFrom('');setFTo('');}} className="btn-ghost text-xs">Сброс</button>}</div>
+            {fin.length===0?<div className="card text-center py-6 text-white/20 text-sm">Нет</div>:<div className="space-y-2">{fin.map(t=><div key={t.id} className="card flex items-center justify-between opacity-60"><div><span className="text-white font-medium">{t.title}</span><span className="text-white/20 text-xs ml-2">{t.type}</span></div><div className="flex items-center gap-2"><span className="badge-finished">Готово</span><button onClick={()=>doDeleteT(t.id,t.title)} className="btn-ghost text-xs text-red-400">Удалить</button></div></div>)}</div>}
           </div>}
 
           {tab === 'questions' && <div className="animate-fade-in">
-            <div className="flex items-center justify-between mb-5"><h2 className="text-xl font-bold text-white">Questions</h2><button onClick={()=>setShowQF(true)} className="btn-primary text-sm px-5 py-2.5">+ Create</button></div>
-            {showQF&&<div className="card mb-5 space-y-3 animate-slide-down"><div><label className="input-label">Tournament *</label><select value={qF.tid} onChange={e=>setQF({...qF,tid:e.target.value})} className="input-field"><option value="">-- Select --</option>{tournaments.filter(t=>t.status!=='FINISHED').map(t=><option key={t.id} value={t.id}>{t.title} ({qc(t)}/{RQ})</option>)}</select></div>{['ru','de','en'].map(l=><div key={l}><label className="input-label">{l.toUpperCase()}</label><div className="flex gap-2"><input value={(qF as any)[l+'_t']} onChange={e=>setQF({...qF,[l+'_t']:e.target.value})} className="input-field flex-1 text-sm" placeholder={'Q ('+l+')'} /><input value={(qF as any)[l+'_a']} onChange={e=>setQF({...qF,[l+'_a']:e.target.value})} className="input-field w-32 sm:w-40 text-sm" placeholder="Ans" /></div></div>)}<div className="flex gap-2"><button onClick={doCreateQ} className="btn-primary text-sm">Create</button><button onClick={()=>setShowQF(false)} className="btn-ghost text-sm">Cancel</button></div></div>}
-            {tournaments.filter(t=>t.status!=='FINISHED').map(t=>{const tqs=t.tournamentQuestions||[];return <div key={t.id} className="mb-6"><div className="flex items-center gap-2 mb-2 flex-wrap"><h3 className="text-sm font-semibold text-white/50">{t.title}</h3><span className={`text-[10px] font-mono ${tqs.length>=RQ?'text-green-400':'text-amber-400'}`}>{tqs.length}/{RQ}</span>{tqs.length<RQ&&<><span className="text-[10px] text-red-400/60">need {RQ-tqs.length}</span><button onClick={()=>doFillTest(t.id)} disabled={busy==='fill-'+t.id} className="text-[10px] bg-brand-500/20 text-brand-400 px-3 py-1 rounded-lg ml-2">{busy==='fill-'+t.id?'...':'Fill test'}</button></>}</div>{tqs.length===0?<div className="card py-4 text-white/20 text-sm text-center">No questions</div>:<div className="space-y-1">{tqs.map((tq:any,i:number)=><div key={tq.id} className="card py-3 px-4"><div className="flex items-start gap-3"><span className="text-white/20 text-xs font-mono w-6 shrink-0">Q{i+1}</span><div className="flex-1">{tq.question?.localizations?.map((l:any)=><div key={l.id} className="text-white/60 text-sm"><span className="text-white/20 font-mono text-[10px] mr-1">{l.language}</span>{l.questionText}{l.correctAnswerLocalized&&<span className="text-green-400/40 ml-2"> {l.correctAnswerLocalized}</span>}</div>)}</div><span className={`text-[10px] ${tq.isUsed?'text-green-400':'text-white/15'}`}>{tq.isUsed?'OK':'o'}</span></div></div>)}</div>}</div>})}
+            <div className="flex items-center justify-between mb-5"><h2 className="text-xl font-bold text-white">Вопросы</h2><button onClick={()=>setShowQF(true)} className="btn-primary text-sm px-5 py-2.5">+ Create</button></div>
+            {showQF&&<div className="card mb-5 space-y-3 animate-slide-down"><div><label className="input-label">Tournament *</label><select value={qF.tid} onChange={e=>setQF({...qF,tid:e.target.value})} className="input-field"><option value="">-- Select --</option>{tournaments.filter(t=>t.status!=='FINISHED').map(t=><option key={t.id} value={t.id}>{t.title} ({qc(t)}/{RQ})</option>)}</select></div>{['ru','de','en'].map(l=><div key={l}><label className="input-label">{l.toUpperCase()}</label><div className="flex gap-2"><input value={(qF as any)[l+'_t']} onChange={e=>setQF({...qF,[l+'_t']:e.target.value})} className="input-field flex-1 text-sm" placeholder={'Q ('+l+')'} /><input value={(qF as any)[l+'_a']} onChange={e=>setQF({...qF,[l+'_a']:e.target.value})} className="input-field w-32 sm:w-40 text-sm" placeholder="Ответ" /></div></div>)}<div className="flex gap-2"><button onClick={doCreateQ} className="btn-primary text-sm">Создать</button><button onClick={()=>setShowQF(false)} className="btn-ghost text-sm">Отмена</button></div></div>}
+            {tournaments.filter(t=>t.status!=='FINISHED').map(t=>{const tqs=t.tournamentQuestions||[];return <div key={t.id} className="mb-6"><div className="flex items-center gap-2 mb-2 flex-wrap"><h3 className="text-sm font-semibold text-white/50">{t.title}</h3><span className={`text-[10px] font-mono ${tqs.length>=RQ?'text-green-400':'text-amber-400'}`}>{tqs.length}/{RQ}</span>{tqs.length<RQ&&<><span className="text-[10px] text-red-400/60">need {RQ-tqs.length}</span><button onClick={()=>doFillTest(t.id)} disabled={busy==='fill-'+t.id} className="text-[10px] bg-brand-500/20 text-brand-400 px-3 py-1 rounded-lg ml-2">{busy==='fill-'+t.id?'...':'Заполнить тест'}</button></>}</div>{tqs.length===0?<div className="card py-4 text-white/20 text-sm text-center">Нет вопросов</div>:<div className="space-y-1">{tqs.map((tq:any,i:number)=><div key={tq.id} className="card py-3 px-4"><div className="flex items-start gap-3"><span className="text-white/20 text-xs font-mono w-6 shrink-0">Q{i+1}</span><div className="flex-1">{tq.question?.localizations?.map((l:any)=><div key={l.id} className="text-white/60 text-sm"><span className="text-white/20 font-mono text-[10px] mr-1">{l.language}</span>{l.questionText}{l.correctAnswerLocalized&&<span className="text-green-400/40 ml-2"> {l.correctAnswerLocalized}</span>}</div>)}</div><span className={`text-[10px] ${tq.isUsed?'text-green-400':'text-white/15'}`}>{tq.isUsed?'OK':'o'}</span></div></div>)}</div>}</div>})}
           </div>}
 
           {/* ========== JUDGE TAB ========== */}
           {tab === 'judge' && <div className="animate-fade-in">
-            <h2 className="text-xl font-bold text-white mb-5">Judge</h2>
+            <h2 className="text-xl font-bold text-white mb-5">Судейство</h2>
 
             {/* Select tournament */}
-            <div className="space-y-2 mb-6">{tournaments.filter(t=>t.status==='LIVE').length===0&&<div className="card text-center py-10 text-white/30">No active tournaments</div>}{tournaments.filter(t=>t.status==='LIVE').map(t=><button key={t.id} onClick={()=>selectJudgeTournament(t.id)} className={`card-hover w-full text-left ${selT?.id===t.id?'border-brand-500/30 bg-brand-500/5':''}`}><span className="badge-live mr-2">LIVE</span><span className="text-white font-semibold">{t.title}</span><span className="text-white/20 text-xs ml-2">{t._count?.participants||0}</span></button>)}</div>
+            <div className="space-y-2 mb-6">{tournaments.filter(t=>t.status==='LIVE').length===0&&<div className="card text-center py-10 text-white/30">Нет активных турниров</div>}{tournaments.filter(t=>t.status==='LIVE').map(t=><button key={t.id} onClick={()=>selectJudgeTournament(t.id)} className={`card-hover w-full text-left ${selT?.id===t.id?'border-brand-500/30 bg-brand-500/5':''}`}><span className="badge-live mr-2">Идёт</span><span className="text-white font-semibold">{t.title}</span><span className="text-white/20 text-xs ml-2">{t._count?.participants||0}</span></button>)}</div>
 
             {selT && <div className="space-y-4">
               {/* Launch button + timer */}
               <div className="card bg-gradient-to-r from-brand-600/10 to-transparent border-brand-500/20">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                   <div>
-                    <h3 className="text-white font-bold">Launch question</h3>
+                    <h3 className="text-white font-bold">Запустить вопрос</h3>
                     <p className="text-white/40 text-xs mt-1">Left: {selT.tournamentQuestions?.filter((q:any)=>!q.isUsed).length||0}</p>
                   </div>
                   <div className="flex items-center gap-4">
                     {/* Admin timer */}
-                    {judgePhase === 'reading' && <div className="text-center"><div className="text-amber-400 text-xs">Reading</div><div className="text-2xl font-mono font-bold text-amber-400">{judgeTimer}s</div></div>}
-                    {judgePhase === 'answering' && <div className="text-center"><div className="text-brand-400 text-xs">Answering</div><div className="text-2xl font-mono font-bold text-brand-400">{judgeTimer}s</div></div>}
+                    {judgePhase === 'reading' && <div className="text-center"><div className="text-amber-400 text-xs">Чтение</div><div className="text-2xl font-mono font-bold text-amber-400">{judgeTimer}s</div></div>}
+                    {judgePhase === 'answering' && <div className="text-center"><div className="text-brand-400 text-xs">Отвечают</div><div className="text-2xl font-mono font-bold text-brand-400">{judgeTimer}s</div></div>}
                     {judgePhase === 'judging' && <div className="text-center"><div className="text-green-400 text-xs">Time to judge!</div></div>}
 
                     <button onClick={doLaunch} className="btn-accent text-sm px-6 py-3"
@@ -264,16 +395,16 @@ export default function AdminPage() {
               {/* Summary bar */}
               {currentQ && <div className="card bg-white/[0.02] border-white/[0.06]">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-                  <div><div className="text-2xl font-mono font-bold text-brand-400">Q{(currentQ.orderIndex||0)+1}<span className="text-white/20 text-sm">/{selT.tournamentQuestions?.length||23}</span></div><div className="text-white/30 text-[10px] mt-0.5">Question</div></div>
-                  <div><div className="text-2xl font-mono font-bold text-white">{(selT.participants||[]).filter((p:any)=>['PLAYING','APPROVED'].includes(p.matchStatus)).length}</div><div className="text-white/30 text-[10px] mt-0.5">Players</div></div>
-                  <div><div className="text-2xl font-mono font-bold text-accent-400">{answers.length}<span className="text-white/20 text-sm">/{(selT.participants||[]).filter((p:any)=>['PLAYING','APPROVED'].includes(p.matchStatus)).length}</span></div><div className="text-white/30 text-[10px] mt-0.5">Answered</div></div>
-                  <div><div className="text-2xl font-mono font-bold text-green-400">{answers.filter((a:any)=>a.judgement).length}<span className="text-white/20 text-sm">/{answers.length}</span></div><div className="text-white/30 text-[10px] mt-0.5">Judged</div></div>
+                  <div><div className="text-2xl font-mono font-bold text-brand-400">Q{(currentQ.orderIndex||0)+1}<span className="text-white/20 text-sm">/{selT.tournamentQuestions?.length||23}</span></div><div className="text-white/30 text-[10px] mt-0.5">Вопрос</div></div>
+                  <div><div className="text-2xl font-mono font-bold text-white">{(selT.participants||[]).filter((p:any)=>['PLAYING','APPROVED'].includes(p.matchStatus)).length}</div><div className="text-white/30 text-[10px] mt-0.5">Игроки</div></div>
+                  <div><div className="text-2xl font-mono font-bold text-accent-400">{answers.length}<span className="text-white/20 text-sm">/{(selT.participants||[]).filter((p:any)=>['PLAYING','APPROVED'].includes(p.matchStatus)).length}</span></div><div className="text-white/30 text-[10px] mt-0.5">Отвечено</div></div>
+                  <div><div className="text-2xl font-mono font-bold text-green-400">{answers.filter((a:any)=>a.judgement).length}<span className="text-white/20 text-sm">/{answers.length}</span></div><div className="text-white/30 text-[10px] mt-0.5">Оценено</div></div>
                 </div>
               </div>}
 
               {/* Scoreboard */}
               {selT.participants && selT.participants.filter((p:any)=>['PLAYING','APPROVED','WON','LOST','FINISHED'].includes(p.matchStatus)).length > 0 && <div className="card bg-white/[0.02] border-white/[0.06]">
-                <h4 className="text-xs font-semibold text-white/40 mb-2">Scoreboard</h4>
+                <h4 className="text-xs font-semibold text-white/40 mb-2">Счёт</h4>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-1.5">
                   {selT.participants.filter((p:any)=>['PLAYING','APPROVED','WON','LOST','FINISHED'].includes(p.matchStatus)).sort((a:any,b:any)=>b.currentScoreUser-a.currentScoreUser || a.currentScoreSystem-b.currentScoreSystem).map((p:any,i:number)=>{
                     const hasAnswered = answers.some((a:any)=>a.user?.profile?.nickname===p.user?.profile?.nickname);
@@ -324,8 +455,8 @@ export default function AdminPage() {
                   </div>
                   <div className="flex gap-2 shrink-0">
                     {a.judgement ? <div className="flex items-center gap-1.5"><span className={`badge ${a.judgement.decision==='ACCEPTED'?'badge-finished':'bg-red-500/15 text-red-400 border border-red-500/20'}`}>{a.judgement.decision==='ACCEPTED'?'OK':'X'}</span><button onClick={()=>doUndo(a.judgement.id)} className="text-[10px] text-white/20 hover:text-amber-400 px-1.5 py-1 rounded hover:bg-amber-500/10 transition-colors" title="Change decision">↻</button></div>
-                    : (!a.answerText || a.answerText === '(no answer)') ? <span className="badge bg-red-500/15 text-red-400 border border-red-500/20">Auto X</span>
-                    : <><button onClick={()=>doJudge(a.id,'ACCEPTED')} className="btn-primary text-xs px-5 py-2.5">OK</button><button onClick={()=>doJudge(a.id,'REJECTED')} className="btn-danger text-xs px-5 py-2.5">X</button></>}
+                    : (!a.answerText || a.answerText === '(no answer)') ? <span className="badge bg-red-500/15 text-red-400 border border-red-500/20">Авто ✗</span>
+                    : <><button onClick={()=>doJudge(a.id,'ACCEPTED')} className="btn-primary text-xs px-5 py-2.5">✓</button><button onClick={()=>doJudge(a.id,'REJECTED')} className="btn-danger text-xs px-5 py-2.5">X</button></>}
                   </div>
                 </div>})}
                 {allJudged && <div className="text-center text-green-400 text-sm py-2">All judged! Ready for next question.</div>}
@@ -333,8 +464,8 @@ export default function AdminPage() {
             </div>}
           </div>}
 
-          {tab==='users'&&users?.data&&<div className="animate-fade-in"><h2 className="text-xl font-bold text-white mb-5">Players</h2><div className="space-y-2">{users.data.map((u:any)=><div key={u.id} className="card flex items-center justify-between"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-xl bg-white/[0.04] flex items-center justify-center text-white/30 text-sm font-bold">{(u.nickname||u.email[0]).charAt(0).toUpperCase()}</div><div><span className="text-white font-medium text-sm">{u.nickname||u.email}</span><div className="flex gap-2 mt-0.5"><span className="badge-draft text-[10px]">{u.role}</span></div></div></div><div className="text-white/20 text-xs font-mono">{u.stats?.totalAnswered||0}</div></div>)}</div></div>}
-          {tab==='logs'&&logs?.data&&<div className="animate-fade-in"><h2 className="text-xl font-bold text-white mb-5">Logs</h2><div className="space-y-1">{logs.data.map((l:any)=><div key={l.id} className="card py-3 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-1"><div className="flex items-center gap-2"><span className="badge-draft text-[10px]">{l.actionType}</span><span className="text-white/40 text-xs">{l.entityType}</span></div><div className="text-white/20 text-[11px] font-mono">{l.adminNickname} | {new Date(l.createdAt).toLocaleString()}</div></div>)}</div></div>}
+          {tab==='users'&&users?.data&&<div className="animate-fade-in"><h2 className="text-xl font-bold text-white mb-5">Игроки</h2><div className="space-y-2">{users.data.map((u:any)=><div key={u.id} className="card flex items-center justify-between"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-xl bg-white/[0.04] flex items-center justify-center text-white/30 text-sm font-bold">{(u.nickname||u.email[0]).charAt(0).toUpperCase()}</div><div><span className="text-white font-medium text-sm">{u.nickname||u.email}</span><div className="flex gap-2 mt-0.5"><span className="badge-draft text-[10px]">{u.role}</span></div></div></div><div className="text-white/20 text-xs font-mono">{u.stats?.totalAnswered||0}</div></div>)}</div></div>}
+          {tab==='logs'&&logs?.data&&<div className="animate-fade-in"><h2 className="text-xl font-bold text-white mb-5">Журнал</h2><div className="space-y-1">{logs.data.map((l:any)=><div key={l.id} className="card py-3 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-1"><div className="flex items-center gap-2"><span className="badge-draft text-[10px]">{l.actionType}</span><span className="text-white/40 text-xs">{l.entityType}</span></div><div className="text-white/20 text-[11px] font-mono">{l.adminNickname} | {new Date(l.createdAt).toLocaleString()}</div></div>)}</div></div>}
         </div>
       </div>
     </div>

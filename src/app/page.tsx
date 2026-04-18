@@ -85,18 +85,17 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up"
             style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
             {user ? (
-              <>
+              (user.role === 'ADMIN' || user.role === 'SUPERADMIN') ? (
+                <button onClick={() => router.push('/admin')}
+                  className="btn-primary text-lg px-10 py-4">
+                  ⚙️ {t.nav.admin} →
+                </button>
+              ) : (
                 <button onClick={() => router.push('/dashboard')}
                   className="btn-primary text-lg px-10 py-4">
                   {t.home.play} →
                 </button>
-                {(user.role === 'ADMIN' || user.role === 'SUPERADMIN') && (
-                  <button onClick={() => router.push('/admin')}
-                    className="btn-secondary text-lg px-10 py-4">
-                    {t.nav.admin}
-                  </button>
-                )}
-              </>
+              )
             ) : (
               <>
                 <button onClick={() => router.push('/auth/login')}
