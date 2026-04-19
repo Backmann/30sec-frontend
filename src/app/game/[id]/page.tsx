@@ -15,6 +15,7 @@ export default function GamePage() {
   const t = getTranslation(locale);
 
   const [tournament, setTournament] = useState<any>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [participant, setParticipant] = useState<any>(null);
   const [answer, setAnswer] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -80,11 +81,14 @@ export default function GamePage() {
     try {
       const data = await api.getTournament(tournamentId);
       setTournament(data);
+      setLoadError(null);
       if (user) {
         const myP = data.participants?.find((p: any) => p.userId === user.id);
         setParticipant(myP || null);
       }
-    } catch {}
+    } catch (e: any) {
+      setLoadError(e?.message || 'Не удалось загрузить турнир');
+    }
   };
 
   // Restore state after page refresh
@@ -154,6 +158,17 @@ export default function GamePage() {
     return { text: loc?.questionText || '', index: ws.question.orderIndex };
   };
 
+  if (loadError) return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+      <div className="text-5xl mb-4">🏁</div>
+      <div className="text-xl text-white font-semibold mb-2">Турнир недоступен</div>
+      <div className="text-white/50 text-sm mb-6 max-w-md">Возможно, турнир уже завершён или был удалён.</div>
+      <div className="flex gap-3">
+        <button onClick={() => router.push('/dashboard')} className="btn-primary">На главную</button>
+        <button onClick={() => { setLoadError(null); loadTournament(); }} className="btn-ghost">Обновить</button>
+      </div>
+    </div>
+  );
   if (!tournament) return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" /></div>;
 
   const isLive = tournament.status === 'LIVE';
