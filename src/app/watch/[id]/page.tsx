@@ -45,7 +45,7 @@ export default function WatchPage() {
   // Load live state from API
   const loadLiveState = async () => {
     try {
-      const data = await api.getLiveState(tournamentId);
+      const data = await api.getSpectatorLiveState(tournamentId);
       setLiveState(data);
     } catch {}
   };

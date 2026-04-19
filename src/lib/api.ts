@@ -176,6 +176,9 @@ class ApiClient {
   async rejectParticipant(pid: string) {
     return this.request<any>(`/tournaments/participants/${pid}/reject`, { method: 'POST' });
   }
+  async getAdminLiveState(id: string) {
+    return this.request<any>(`/tournaments/${id}/live-state`);
+  }
   async getGameState(id: string) {
     return this.request<any>(`/tournaments/${id}/game-state`);
   }
@@ -227,7 +230,7 @@ class ApiClient {
   }
 
   // ─── Spectator ────────────────────────────────
-  async getLiveState(tournamentId: string) {
+  async getSpectatorLiveState(tournamentId: string) {
     return this.request<any>(`/spectator/live/${tournamentId}`);
   }
 

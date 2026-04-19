@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/store';
 import { api } from '@/lib/api';
 import io from 'socket.io-client';
 
-type Tab = 'dashboard' | 'tournaments' | 'questions' | 'judge' | 'users' | 'logs';
+type Tab = 'dashboard' | 'tournaments' | 'questions' | 'users' | 'logs';
 const RQ = 23;
 
 export default function AdminPage() {
@@ -67,18 +67,10 @@ export default function AdminPage() {
   }, [refresh]);
   useEffect(() => {
     if (tab === 'dashboard') api.getAdminDashboard().then(setDashboard).catch(() => {});
-    if (['tournaments','questions','judge'].includes(tab)) refresh();
+    if (['tournaments','questions'].includes(tab)) refresh();
     if (tab === 'users') api.getAdminUsers().then(setUsers).catch(() => {});
     if (tab === 'logs') api.getAdminLogs().then(setLogs).catch(() => {});
   }, [tab, refresh]);
-
-  // Auto-select LIVE tournament in judge tab
-  useEffect(() => {
-    if (tab === 'judge' && !selT && tournaments.length > 0) {
-      const live = tournaments.find(t => t.status === 'LIVE');
-      if (live) selectJudgeTournament(live.id);
-    }
-  }, [tab, tournaments]);
 
   if (loading || !user) return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" /></div>;
 
@@ -189,7 +181,7 @@ export default function AdminPage() {
   const wk = new Date(Date.now()-7*86400000).toISOString();
   const active = tournaments.filter(t => ['LIVE','SCHEDULED','DRAFT'].includes(t.status));
   const fin = tournaments.filter(t => { if (t.status !== 'FINISHED') return false; const d = t.endAt || t.createdAt; if (fFrom && new Date(d)<new Date(fFrom)) return false; if (fTo && new Date(d)>new Date(fTo+'T23:59:59')) return false; if (!fFrom && !fTo) return new Date(d)>new Date(wk); return true; });
-  const tabs: {id:Tab;icon:string;label:string}[] = [{id:'dashboard',icon:'D',label:'Дашборд'},{id:'tournaments',icon:'T',label:'Турниры'},{id:'questions',icon:'Q',label:'Вопросы'},{id:'judge',icon:'J',label:'Судейство'},{id:'users',icon:'U',label:'Игроки'},{id:'logs',icon:'L',label:'Журнал'}];
+  const tabs: {id:Tab;icon:string;label:string}[] = [{id:'dashboard',icon:'D',label:'Дашборд'},{id:'tournaments',icon:'T',label:'Турниры'},{id:'questions',icon:'Q',label:'Вопросы'},{id:'users',icon:'U',label:'Игроки'},{id:'logs',icon:'L',label:'Журнал'}];
   const qc = (t: any) => t.tournamentQuestions?.length || 0;
   const qr = (t: any) => qc(t) >= RQ;
   const apprd = (t: any) => (t.participants || []).filter((p: any) => p.matchStatus === 'APPROVED' || p.matchStatus === 'PLAYING').length;
@@ -250,10 +242,16 @@ export default function AdminPage() {
                 <div className="text-white font-semibold">Добавить вопросы</div>
                 <div className="text-white/30 text-xs mt-1">Для предстоящих турниров</div>
               </button>
-              <button onClick={() => setTab('judge')} className="card-hover text-left group">
+              <button onClick={() => {
+                const live = dashboard.liveTournamentsList?.[0];
+                const upcoming = dashboard.upcomingTournaments?.[0];
+                const target = live || upcoming;
+                if (target) router.push('/admin/live/' + target.id);
+                else alert('Нет активных или предстоящих турниров');
+              }} className="card-hover text-left group">
                 <div className="text-2xl mb-2">⚖️</div>
-                <div className="text-white font-semibold">Перейти в судейство</div>
-                <div className="text-white/30 text-xs mt-1">Оценить ответы игроков</div>
+                <div className="text-white font-semibold">Открыть трансляцию</div>
+                <div className="text-white/30 text-xs mt-1">Текущий или следующий турнир</div>
               </button>
             </div>
 
@@ -284,12 +282,12 @@ export default function AdminPage() {
                 <h3 className="section-title mb-3 flex items-center gap-2"><span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" /> Идут сейчас</h3>
                 <div className="space-y-2">
                   {dashboard.liveTournamentsList.map((t:any) => (
-                    <button key={t.id} onClick={() => setTab('judge')} className="card-hover w-full flex items-center justify-between">
+                    <button key={t.id} onClick={() => router.push('/admin/live/' + t.id)} className="card-hover w-full flex items-center justify-between">
                       <div>
                         <div className="text-white font-semibold">{t.title}</div>
                         <div className="text-white/30 text-xs">{t.participantsCount} участников</div>
                       </div>
-                      <span className="text-red-400 text-xs">⚖️ Судить →</span>
+                      <span className="text-red-400 text-xs">⚖️ Открыть →</span>
                     </button>
                   ))}
                 </div>
@@ -304,13 +302,13 @@ export default function AdminPage() {
                   {dashboard.upcomingTournaments.map((t:any) => {
                     const startDate = new Date(t.startAt);
                     return (
-                      <div key={t.id} className="card flex items-center justify-between">
+                      <button key={t.id} onClick={() => router.push('/admin/live/' + t.id)} className="card-hover w-full flex items-center justify-between text-left">
                         <div>
                           <div className="text-white font-semibold">{t.title}</div>
                           <div className="text-white/30 text-xs">{startDate.toLocaleString('ru-RU', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'})} · {t.participantsCount} заявок</div>
                         </div>
                         <span className={`text-xs font-mono ${t.ready ? 'text-green-400' : 'text-amber-400'}`}>{t.questionsCount}/{t.questionsRequired} {t.ready ? '✓' : ''}</span>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
@@ -358,110 +356,6 @@ export default function AdminPage() {
             <div className="flex items-center justify-between mb-5"><h2 className="text-xl font-bold text-white">Вопросы</h2><button onClick={()=>setShowQF(true)} className="btn-primary text-sm px-5 py-2.5">+ Create</button></div>
             {showQF&&<div className="card mb-5 space-y-3 animate-slide-down"><div><label className="input-label">Tournament *</label><select value={qF.tid} onChange={e=>setQF({...qF,tid:e.target.value})} className="input-field"><option value="">-- Select --</option>{tournaments.filter(t=>t.status!=='FINISHED').map(t=><option key={t.id} value={t.id}>{t.title} ({qc(t)}/{RQ})</option>)}</select></div>{['ru','de','en'].map(l=><div key={l}><label className="input-label">{l.toUpperCase()}</label><div className="flex gap-2"><input value={(qF as any)[l+'_t']} onChange={e=>setQF({...qF,[l+'_t']:e.target.value})} className="input-field flex-1 text-sm" placeholder={'Q ('+l+')'} /><input value={(qF as any)[l+'_a']} onChange={e=>setQF({...qF,[l+'_a']:e.target.value})} className="input-field w-32 sm:w-40 text-sm" placeholder="Ответ" /></div></div>)}<div className="flex gap-2"><button onClick={doCreateQ} className="btn-primary text-sm">Создать</button><button onClick={()=>setShowQF(false)} className="btn-ghost text-sm">Отмена</button></div></div>}
             {tournaments.filter(t=>t.status!=='FINISHED').map(t=>{const tqs=t.tournamentQuestions||[];return <div key={t.id} className="mb-6"><div className="flex items-center gap-2 mb-2 flex-wrap"><h3 className="text-sm font-semibold text-white/50">{t.title}</h3><span className={`text-[10px] font-mono ${tqs.length>=RQ?'text-green-400':'text-amber-400'}`}>{tqs.length}/{RQ}</span>{tqs.length<RQ&&<><span className="text-[10px] text-red-400/60">need {RQ-tqs.length}</span><button onClick={()=>doFillTest(t.id)} disabled={busy==='fill-'+t.id} className="text-[10px] bg-brand-500/20 text-brand-400 px-3 py-1 rounded-lg ml-2">{busy==='fill-'+t.id?'...':'Заполнить тест'}</button></>}</div>{tqs.length===0?<div className="card py-4 text-white/20 text-sm text-center">Нет вопросов</div>:<div className="space-y-1">{tqs.map((tq:any,i:number)=><div key={tq.id} className="card py-3 px-4"><div className="flex items-start gap-3"><span className="text-white/20 text-xs font-mono w-6 shrink-0">Q{i+1}</span><div className="flex-1">{tq.question?.localizations?.map((l:any)=><div key={l.id} className="text-white/60 text-sm"><span className="text-white/20 font-mono text-[10px] mr-1">{l.language}</span>{l.questionText}{l.correctAnswerLocalized&&<span className="text-green-400/40 ml-2"> {l.correctAnswerLocalized}</span>}</div>)}</div><span className={`text-[10px] ${tq.isUsed?'text-green-400':'text-white/15'}`}>{tq.isUsed?'OK':'o'}</span></div></div>)}</div>}</div>})}
-          </div>}
-
-          {/* ========== JUDGE TAB ========== */}
-          {tab === 'judge' && <div className="animate-fade-in">
-            <h2 className="text-xl font-bold text-white mb-5">Судейство</h2>
-
-            {/* Select tournament */}
-            <div className="space-y-2 mb-6">{tournaments.filter(t=>t.status==='LIVE').length===0&&<div className="card text-center py-10 text-white/30">Нет активных турниров</div>}{tournaments.filter(t=>t.status==='LIVE').map(t=><button key={t.id} onClick={()=>selectJudgeTournament(t.id)} className={`card-hover w-full text-left ${selT?.id===t.id?'border-brand-500/30 bg-brand-500/5':''}`}><span className="badge-live mr-2">Идёт</span><span className="text-white font-semibold">{t.title}</span><span className="text-white/20 text-xs ml-2">{t._count?.participants||0}</span></button>)}</div>
-
-            {selT && <div className="space-y-4">
-              {/* Launch button + timer */}
-              <div className="card bg-gradient-to-r from-brand-600/10 to-transparent border-brand-500/20">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-white font-bold">Запустить вопрос</h3>
-                    <p className="text-white/40 text-xs mt-1">Left: {selT.tournamentQuestions?.filter((q:any)=>!q.isUsed).length||0}</p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    {/* Admin timer */}
-                    {judgePhase === 'reading' && <div className="text-center"><div className="text-amber-400 text-xs">Чтение</div><div className="text-2xl font-mono font-bold text-amber-400">{judgeTimer}s</div></div>}
-                    {judgePhase === 'answering' && <div className="text-center"><div className="text-brand-400 text-xs">Отвечают</div><div className="text-2xl font-mono font-bold text-brand-400">{judgeTimer}s</div></div>}
-                    {judgePhase === 'judging' && <div className="text-center"><div className="text-green-400 text-xs">Time to judge!</div></div>}
-
-                    <button onClick={doLaunch} className="btn-accent text-sm px-6 py-3"
-                      disabled={busy==='launch' || !canLaunchNext || !selT.tournamentQuestions?.some((q:any)=>!q.isUsed)}>
-                      {busy==='launch'?'...':'Launch'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Q buttons */}
-              <div className="flex gap-2 overflow-x-auto pb-2">{selT.tournamentQuestions?.map((tq:any,i:number)=><button key={tq.id} onClick={async()=>{setAnswers(await api.getAnswersForQuestion(selT.id,tq.questionId));setCurrentQ({questionId:tq.questionId,orderIndex:tq.orderIndex,question:tq.question});}} className={`px-3 py-2 rounded-xl text-xs whitespace-nowrap ${tq.isUsed?'bg-green-500/10 text-green-400 border border-green-500/20':'bg-white/[0.03] text-white/30 border border-white/[0.06]'}`}>Q{i+1} {tq.isUsed?'OK':'o'}</button>)}</div>
-
-              {/* Summary bar */}
-              {currentQ && <div className="card bg-white/[0.02] border-white/[0.06]">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-                  <div><div className="text-2xl font-mono font-bold text-brand-400">Q{(currentQ.orderIndex||0)+1}<span className="text-white/20 text-sm">/{selT.tournamentQuestions?.length||23}</span></div><div className="text-white/30 text-[10px] mt-0.5">Вопрос</div></div>
-                  <div><div className="text-2xl font-mono font-bold text-white">{(selT.participants||[]).filter((p:any)=>['PLAYING','APPROVED'].includes(p.matchStatus)).length}</div><div className="text-white/30 text-[10px] mt-0.5">Игроки</div></div>
-                  <div><div className="text-2xl font-mono font-bold text-accent-400">{answers.length}<span className="text-white/20 text-sm">/{(selT.participants||[]).filter((p:any)=>['PLAYING','APPROVED'].includes(p.matchStatus)).length}</span></div><div className="text-white/30 text-[10px] mt-0.5">Отвечено</div></div>
-                  <div><div className="text-2xl font-mono font-bold text-green-400">{answers.filter((a:any)=>a.judgement).length}<span className="text-white/20 text-sm">/{answers.length}</span></div><div className="text-white/30 text-[10px] mt-0.5">Оценено</div></div>
-                </div>
-              </div>}
-
-              {/* Scoreboard */}
-              {selT.participants && selT.participants.filter((p:any)=>['PLAYING','APPROVED','WON','LOST','FINISHED'].includes(p.matchStatus)).length > 0 && <div className="card bg-white/[0.02] border-white/[0.06]">
-                <h4 className="text-xs font-semibold text-white/40 mb-2">Счёт</h4>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-1.5">
-                  {selT.participants.filter((p:any)=>['PLAYING','APPROVED','WON','LOST','FINISHED'].includes(p.matchStatus)).sort((a:any,b:any)=>b.currentScoreUser-a.currentScoreUser || a.currentScoreSystem-b.currentScoreSystem).map((p:any,i:number)=>{
-                    const hasAnswered = answers.some((a:any)=>a.user?.profile?.nickname===p.user?.profile?.nickname);
-                    const myAns = answers.find((a:any)=>a.user?.profile?.nickname===p.user?.profile?.nickname);
-                    const isJudged = myAns?.judgement;
-                    const isCorrect = isJudged?.decision === 'ACCEPTED';
-                    const borderColor = isJudged ? (isCorrect ? 'border-green-500/30 bg-green-500/5' : 'border-red-500/30 bg-red-500/5') : hasAnswered ? 'border-amber-500/20 bg-amber-500/5' : 'border-white/[0.06]';
-                    return <div key={p.id} className={`flex items-center justify-between px-2.5 py-2 rounded-xl border ${borderColor}`}>
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="text-white/20 text-[10px] font-mono">{i+1}</span>
-                        <span className="text-white text-xs font-medium truncate">{p.user?.profile?.nickname}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="font-mono text-xs font-bold"><span className="text-brand-400">{p.currentScoreUser}</span><span className="text-white/15">:</span><span className="text-red-400">{p.currentScoreSystem}</span></span>
-                        {isJudged && <span className={`text-[10px] ${isCorrect?'text-green-400':'text-red-400'}`}>{isCorrect?'✓':'✗'}</span>}
-                        {!isJudged && hasAnswered && <span className="text-[10px] text-amber-400">●</span>}
-                      </div>
-                    </div>
-                  })}
-                </div>
-              </div>}
-
-              {/* Current question display */}
-              {currentQ && <div className="card bg-white/[0.02] border-brand-500/10">
-                <div className="flex items-center gap-2 mb-2"><span className="text-[10px] text-white/30 font-mono">Q{currentQ.orderIndex+1}</span></div>
-                {currentQLocs.map((l:any)=><p key={l.id} className="text-white/60 text-sm"><span className="text-white/20 font-mono text-[10px] mr-1">{l.language}</span>{l.questionText}</p>)}
-                {correctAnswers && <p className="text-green-400/60 text-sm mt-2">Answer: <span className="text-green-400 font-semibold">{correctAnswers}</span></p>}
-              </div>}
-
-              {/* Answers */}
-              {answers.length > 0 ? <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-white/50">Answers ({answers.filter((a:any)=>a.judgement).length}/{answers.length} judged):</h3>
-                  <div className="flex gap-1">{(['all','unjudged','judged'] as const).map(f=><button key={f} onClick={()=>setJudgeFilter(f)} className={`text-[10px] px-3 py-1 rounded-lg ${judgeFilter===f?'bg-brand-500/20 text-brand-400':'bg-white/[0.03] text-white/30'}`}>{f==='all'?`All (${answers.length})`:f==='unjudged'?`Unjudged (${answers.filter((a:any)=>!a.judgement).length})`:`Judged (${answers.filter((a:any)=>a.judgement).length})`}</button>)}</div>
-                </div>
-
-                {answers.filter((a:any) => judgeFilter === 'all' ? true : judgeFilter === 'unjudged' ? !a.judgement : !!a.judgement).map((a:any) => {
-                  const sim = checkSimilarity(a.answerText || '', correctAnswers);
-                  const simColor = sim === 'match' ? 'border-green-500/30 bg-green-500/5' : sim === 'close' ? 'border-amber-500/30 bg-amber-500/5' : '';
-                  const simBadge = sim === 'match' ? <span className="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded-md ml-2">AI: match</span> : sim === 'close' ? <span className="text-[10px] bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-md ml-2">AI: close</span> : null;
-                  return <div key={a.id} className={`card flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${simColor}`}>
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="w-8 h-8 rounded-xl bg-brand-500/10 flex items-center justify-center text-brand-400 text-xs font-bold shrink-0">{(a.user?.profile?.nickname||'?')[0].toUpperCase()}</div>
-                    <div className="min-w-0">
-                      <span className="text-brand-400 font-medium text-sm">{a.user?.profile?.nickname}{simBadge}</span>
-                      <div className="text-white text-lg font-semibold truncate">{a.answerText || '(no answer)'}</div>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    {a.judgement ? <div className="flex items-center gap-1.5"><span className={`badge ${a.judgement.decision==='ACCEPTED'?'badge-finished':'bg-red-500/15 text-red-400 border border-red-500/20'}`}>{a.judgement.decision==='ACCEPTED'?'OK':'X'}</span><button onClick={()=>doUndo(a.judgement.id)} className="text-[10px] text-white/20 hover:text-amber-400 px-1.5 py-1 rounded hover:bg-amber-500/10 transition-colors" title="Change decision">↻</button></div>
-                    : (!a.answerText || a.answerText === '(no answer)') ? <span className="badge bg-red-500/15 text-red-400 border border-red-500/20">Авто ✗</span>
-                    : <><button onClick={()=>doJudge(a.id,'ACCEPTED')} className="btn-primary text-xs px-5 py-2.5">✓</button><button onClick={()=>doJudge(a.id,'REJECTED')} className="btn-danger text-xs px-5 py-2.5">X</button></>}
-                  </div>
-                </div>})}
-                {allJudged && <div className="text-center text-green-400 text-sm py-2">All judged! Ready for next question.</div>}
-              </div> : <div className="card text-center py-8 text-white/20 text-sm">{judgePhase === 'idle' ? 'Launch a question to start' : judgePhase === 'judging' ? 'Loading answers...' : 'Waiting for answers...'}</div>}
-            </div>}
           </div>}
 
           {tab==='users'&&users?.data&&<div className="animate-fade-in"><h2 className="text-xl font-bold text-white mb-5">Игроки</h2><div className="space-y-2">{users.data.map((u:any)=><div key={u.id} className="card flex items-center justify-between"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-xl bg-white/[0.04] flex items-center justify-center text-white/30 text-sm font-bold">{(u.nickname||u.email[0]).charAt(0).toUpperCase()}</div><div><span className="text-white font-medium text-sm">{u.nickname||u.email}</span><div className="flex gap-2 mt-0.5"><span className="badge-draft text-[10px]">{u.role}</span></div></div></div><div className="text-white/20 text-xs font-mono">{u.stats?.totalAnswered||0}</div></div>)}</div></div>}
