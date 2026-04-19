@@ -36,6 +36,14 @@ export default function AdminPage() {
   const [undoTimer, setUndoTimer] = useState<{id: string; aid: string; sec: number} | null>(null);
   const [judgeFilter, setJudgeFilter] = useState<'all' | 'unjudged' | 'judged'>('all');
 
+  // Questions library state
+  const [qSubtab, setQSubtab] = useState<'library' | 'byTournament'>('library');
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  const [qLibrary, setQLibrary] = useState<any[]>([]);
+  const [qSearch, setQSearch] = useState('');
+  const [qOnlyUnused, setQOnlyUnused] = useState(false);
+  const [qSort, setQSort] = useState<'new' | 'old'>('new');
+
   // Simple similarity check: normalize and compare
   const checkSimilarity = (answer: string, correct: string): 'match' | 'close' | 'wrong' => {
     if (!answer || !correct) return 'wrong';
@@ -72,6 +80,16 @@ export default function AdminPage() {
     if (tab === 'logs') api.getAdminLogs().then(setLogs).catch(() => {});
   }, [tab, refresh]);
 
+  // Load questions library when on library subtab
+  useEffect(() => {
+    if (tab !== 'questions' || qSubtab !== 'library') return;
+    const delay = setTimeout(() => {
+      api.getQuestions({ search: qSearch, onlyUnused: qOnlyUnused, sort: qSort })
+        .then(setQLibrary).catch(() => {});
+    }, 250); // debounce search
+    return () => clearTimeout(delay);
+  }, [tab, qSubtab, qSearch, qOnlyUnused, qSort]);
+
   if (loading || !user) return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" /></div>;
 
   const doCreateT = async () => {
@@ -88,15 +106,60 @@ export default function AdminPage() {
   const doApprove = async (pid: string) => { await api.approveParticipant(pid); refresh(); };
   const doReject = async (pid: string) => { await api.rejectParticipant(pid); refresh(); };
   const doCreateQ = async () => {
-    if (!qF.tid) return alert('Select tournament');
-    if (!qF.ru_t && !qF.de_t && !qF.en_t) return alert('Enter question');
-    const locs: any[] = [];
-    if (qF.ru_t) locs.push({ language: 'ru', questionText: qF.ru_t, correctAnswer: qF.ru_a });
-    if (qF.de_t) locs.push({ language: 'de', questionText: qF.de_t, correctAnswer: qF.de_a });
-    if (qF.en_t) locs.push({ language: 'en', questionText: qF.en_t, correctAnswer: qF.en_a });
-    const q = await api.createQuestion({ category: 'LOGIC', localizations: locs });
-    await api.addQuestionToTournament(qF.tid, q.id);
-    setQF({ ...qF, ru_t: '', ru_a: '', de_t: '', de_a: '', en_t: '', en_a: '' }); refresh();
+    if (!qF.ru_t && !qF.de_t && !qF.en_t) return alert('Введите текст вопроса хотя бы на одном языке');
+    try {
+      const locs: any[] = [];
+      if (qF.ru_t) locs.push({ language: 'ru', questionText: qF.ru_t, correctAnswer: qF.ru_a });
+      if (qF.de_t) locs.push({ language: 'de', questionText: qF.de_t, correctAnswer: qF.de_a });
+      if (qF.en_t) locs.push({ language: 'en', questionText: qF.en_t, correctAnswer: qF.en_a });
+      if (editingQuestionId) {
+        // Update existing question
+        await api.updateQuestion(editingQuestionId, { localizations: locs });
+      } else {
+        // Create new
+        const q = await api.createQuestion({ category: 'LOGIC', localizations: locs });
+        if (qF.tid) {
+          await api.addQuestionToTournament(qF.tid, q.id);
+        }
+      }
+      setQF({ tid: qF.tid, ru_t: '', ru_a: '', de_t: '', de_a: '', en_t: '', en_a: '' });
+      setShowQF(false);
+      setEditingQuestionId(null);
+      refresh();
+      if (qSubtab === 'library') {
+        const list = await api.getQuestions({ search: qSearch, onlyUnused: qOnlyUnused, sort: qSort });
+        setQLibrary(list);
+      }
+    } catch (e: any) {
+      alert('Ошибка: ' + (e.message || 'не удалось сохранить вопрос'));
+    }
+  };
+
+  const doEditQ = (q: any) => {
+    const ru = q.localizations?.find((l: any) => l.language === 'ru');
+    const de = q.localizations?.find((l: any) => l.language === 'de');
+    const en = q.localizations?.find((l: any) => l.language === 'en');
+    setQF({
+      tid: '',
+      ru_t: ru?.questionText || '', ru_a: ru?.correctAnswerLocalized || '',
+      de_t: de?.questionText || '', de_a: de?.correctAnswerLocalized || '',
+      en_t: en?.questionText || '', en_a: en?.correctAnswerLocalized || '',
+    });
+    setEditingQuestionId(q.id);
+    setShowQF(true);
+  };
+
+  const doDeleteQ = async (q: any) => {
+    const text = q.localizations?.[0]?.questionText || 'вопрос';
+    if (!confirm(`Удалить вопрос: "${text.slice(0, 60)}${text.length > 60 ? '...' : ''}"?\n\nЭто действие нельзя отменить.`)) return;
+    try {
+      await api.deleteQuestion(q.id);
+      const list = await api.getQuestions({ search: qSearch, onlyUnused: qOnlyUnused, sort: qSort });
+      setQLibrary(list);
+      refresh();
+    } catch (e: any) {
+      alert('Не удалось удалить: ' + (e.message || 'ошибка'));
+    }
   };
   const doJudge = async (aid: string, d: 'ACCEPTED' | 'REJECTED') => {
     const result = await api.judgeAnswer(aid, d);
@@ -353,9 +416,75 @@ export default function AdminPage() {
           </div>}
 
           {tab === 'questions' && <div className="animate-fade-in">
-            <div className="flex items-center justify-between mb-5"><h2 className="text-xl font-bold text-white">Вопросы</h2><button onClick={()=>setShowQF(true)} className="btn-primary text-sm px-5 py-2.5">+ Create</button></div>
-            {showQF&&<div className="card mb-5 space-y-3 animate-slide-down"><div><label className="input-label">Tournament *</label><select value={qF.tid} onChange={e=>setQF({...qF,tid:e.target.value})} className="input-field"><option value="">-- Select --</option>{tournaments.filter(t=>t.status!=='FINISHED').map(t=><option key={t.id} value={t.id}>{t.title} ({qc(t)}/{RQ})</option>)}</select></div>{['ru','de','en'].map(l=><div key={l}><label className="input-label">{l.toUpperCase()}</label><div className="flex gap-2"><input value={(qF as any)[l+'_t']} onChange={e=>setQF({...qF,[l+'_t']:e.target.value})} className="input-field flex-1 text-sm" placeholder={'Q ('+l+')'} /><input value={(qF as any)[l+'_a']} onChange={e=>setQF({...qF,[l+'_a']:e.target.value})} className="input-field w-32 sm:w-40 text-sm" placeholder="Ответ" /></div></div>)}<div className="flex gap-2"><button onClick={doCreateQ} className="btn-primary text-sm">Создать</button><button onClick={()=>setShowQF(false)} className="btn-ghost text-sm">Отмена</button></div></div>}
-            {tournaments.filter(t=>t.status!=='FINISHED').map(t=>{const tqs=t.tournamentQuestions||[];return <div key={t.id} className="mb-6"><div className="flex items-center gap-2 mb-2 flex-wrap"><h3 className="text-sm font-semibold text-white/50">{t.title}</h3><span className={`text-[10px] font-mono ${tqs.length>=RQ?'text-green-400':'text-amber-400'}`}>{tqs.length}/{RQ}</span>{tqs.length<RQ&&<><span className="text-[10px] text-red-400/60">need {RQ-tqs.length}</span><button onClick={()=>doFillTest(t.id)} disabled={busy==='fill-'+t.id} className="text-[10px] bg-brand-500/20 text-brand-400 px-3 py-1 rounded-lg ml-2">{busy==='fill-'+t.id?'...':'Заполнить тест'}</button></>}</div>{tqs.length===0?<div className="card py-4 text-white/20 text-sm text-center">Нет вопросов</div>:<div className="space-y-1">{tqs.map((tq:any,i:number)=><div key={tq.id} className="card py-3 px-4"><div className="flex items-start gap-3"><span className="text-white/20 text-xs font-mono w-6 shrink-0">Q{i+1}</span><div className="flex-1">{tq.question?.localizations?.map((l:any)=><div key={l.id} className="text-white/60 text-sm"><span className="text-white/20 font-mono text-[10px] mr-1">{l.language}</span>{l.questionText}{l.correctAnswerLocalized&&<span className="text-green-400/40 ml-2"> {l.correctAnswerLocalized}</span>}</div>)}</div><span className={`text-[10px] ${tq.isUsed?'text-green-400':'text-white/15'}`}>{tq.isUsed?'OK':'o'}</span></div></div>)}</div>}</div>})}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+              <h2 className="text-xl font-bold text-white">Вопросы</h2>
+              <div className="flex gap-2">
+                <button onClick={() => setQSubtab('library')} className={`text-sm px-4 py-2 rounded-xl transition ${qSubtab==='library'?'bg-brand-500/20 text-brand-400 font-semibold':'text-white/40 hover:text-white hover:bg-white/5'}`}>Библиотека</button>
+                <button onClick={() => setQSubtab('byTournament')} className={`text-sm px-4 py-2 rounded-xl transition ${qSubtab==='byTournament'?'bg-brand-500/20 text-brand-400 font-semibold':'text-white/40 hover:text-white hover:bg-white/5'}`}>По турнирам</button>
+                <button onClick={() => { setEditingQuestionId(null); setQF({ tid: '', ru_t: '', ru_a: '', de_t: '', de_a: '', en_t: '', en_a: '' }); setShowQF(true); }} className="btn-primary text-sm px-5 py-2">+ Новый вопрос</button>
+              </div>
+            </div>
+
+            {showQF && <div className="card mb-5 space-y-3 animate-slide-down"><div className="text-sm font-semibold text-white/70 mb-2">{editingQuestionId ? '✏️ Редактирование вопроса' : '➕ Новый вопрос'}</div>{!editingQuestionId && <div><label className="input-label">Турнир (опционально)</label><select value={qF.tid} onChange={e=>setQF({...qF,tid:e.target.value})} className="input-field"><option value="">— не привязывать —</option>{tournaments.filter(t=>t.status!=='FINISHED').map(t=><option key={t.id} value={t.id}>{t.title} ({qc(t)}/{RQ})</option>)}</select></div>}{['ru','de','en'].map(l=><div key={l}><label className="input-label">{l.toUpperCase()}</label><div className="flex gap-2"><input value={(qF as any)[l+'_t']} onChange={e=>setQF({...qF,[l+'_t']:e.target.value})} className="input-field flex-1 text-sm" placeholder={'Вопрос ('+l+')'} /><input value={(qF as any)[l+'_a']} onChange={e=>setQF({...qF,[l+'_a']:e.target.value})} className="input-field w-32 sm:w-40 text-sm" placeholder="Ответ" /></div></div>)}<div className="flex gap-2"><button onClick={doCreateQ} className="btn-primary text-sm">{editingQuestionId ? 'Сохранить' : 'Создать'}</button><button onClick={()=>{ setShowQF(false); setEditingQuestionId(null); }} className="btn-ghost text-sm">Отмена</button></div></div>}
+
+            {/* ─── LIBRARY SUBTAB ─── */}
+            {qSubtab === 'library' && <div>
+              <div className="card mb-4 flex flex-col sm:flex-row gap-3">
+                <input
+                  value={qSearch}
+                  onChange={e => setQSearch(e.target.value)}
+                  placeholder="🔍 Поиск по тексту вопроса или ответа..."
+                  className="input-field flex-1 text-sm"
+                />
+                <select value={qSort} onChange={e => setQSort(e.target.value as any)} className="input-field text-sm sm:w-40">
+                  <option value="new">Сначала новые</option>
+                  <option value="old">Сначала старые</option>
+                </select>
+                <label className="flex items-center gap-2 text-sm text-white/60 cursor-pointer px-3">
+                  <input type="checkbox" checked={qOnlyUnused} onChange={e => setQOnlyUnused(e.target.checked)} className="accent-brand-500" />
+                  Только неиспользованные
+                </label>
+              </div>
+
+              <div className="text-white/30 text-xs mb-3">Найдено: {qLibrary.length}</div>
+
+              {qLibrary.length === 0 ? (
+                <div className="card py-8 text-center text-white/30 text-sm">Нет вопросов, соответствующих фильтрам</div>
+              ) : (
+                <div className="space-y-2">
+                  {qLibrary.map((q: any) => {
+                    const loc = q.localizations?.find((l: any) => l.language === 'ru') || q.localizations?.[0];
+                    return (
+                      <div key={q.id} className="card py-3 px-4">
+                        <div className="flex items-start gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-white text-sm">{loc?.questionText || '(пусто)'}</div>
+                            {loc?.correctAnswerLocalized && <div className="text-green-400/60 text-xs mt-0.5">→ {loc.correctAnswerLocalized}</div>}
+                            <div className="flex gap-2 mt-1.5 text-[10px] items-center">
+                              <span className="text-white/30">{new Date(q.createdAt).toLocaleDateString('ru-RU', {day:'2-digit', month:'short'})}</span>
+                              {q.played && <span className="bg-white/5 text-white/40 px-1.5 py-0.5 rounded">✓ сыгран</span>}
+                              {q.inUpcoming && !q.played && <span className="bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded">в предстоящем</span>}
+                              {!q.played && !q.inUpcoming && <span className="bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded">свободен</span>}
+                              <span className="text-white/20">{q.localizations?.length || 0} {q.localizations?.length === 1 ? 'язык' : 'языка'}</span>
+                            </div>
+                          </div>
+                          <div className="flex gap-1 shrink-0">
+                            <button onClick={() => doEditQ(q)} title="Редактировать" className="w-8 h-8 rounded-lg bg-white/[0.03] hover:bg-brand-500/20 text-white/40 hover:text-brand-400 text-sm transition">✏️</button>
+                            <button onClick={() => doDeleteQ(q)} title="Удалить" disabled={q.inUpcoming} className="w-8 h-8 rounded-lg bg-white/[0.03] hover:bg-red-500/20 text-white/40 hover:text-red-400 text-sm transition disabled:opacity-30 disabled:cursor-not-allowed">🗑</button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>}
+
+            {/* ─── BY TOURNAMENT SUBTAB ─── */}
+            {qSubtab === 'byTournament' && <div>
+              {tournaments.filter(t=>t.status!=='FINISHED').map(t=>{const tqs=t.tournamentQuestions||[];return <div key={t.id} className="mb-6"><div className="flex items-center gap-2 mb-2 flex-wrap"><h3 className="text-sm font-semibold text-white/50">{t.title}</h3><span className={`text-[10px] font-mono ${tqs.length>=RQ?'text-green-400':'text-amber-400'}`}>{tqs.length}/{RQ}</span>{tqs.length<RQ&&<span className="text-[10px] text-red-400/60">нужно ещё {RQ-tqs.length}</span>}</div>{tqs.length===0?<div className="card py-4 text-white/20 text-sm text-center">Нет вопросов</div>:<div className="space-y-1">{tqs.map((tq:any,i:number)=><div key={tq.id} className="card py-3 px-4"><div className="flex items-start gap-3"><span className="text-white/20 text-xs font-mono w-6 shrink-0">Q{i+1}</span><div className="flex-1">{tq.question?.localizations?.map((l:any)=><div key={l.id} className="text-white/60 text-sm"><span className="text-white/20 font-mono text-[10px] mr-1">{l.language}</span>{l.questionText}{l.correctAnswerLocalized&&<span className="text-green-400/40 ml-2"> {l.correctAnswerLocalized}</span>}</div>)}</div><span className={`text-[10px] ${tq.isUsed?'text-green-400':'text-white/15'}`}>{tq.isUsed?'OK':'o'}</span></div></div>)}</div>}</div>})}
+              {tournaments.filter(t=>t.status!=='FINISHED').length === 0 && <div className="card py-8 text-center text-white/30 text-sm">Нет активных турниров</div>}
+            </div>}
           </div>}
 
           {tab==='users'&&users?.data&&<div className="animate-fade-in"><h2 className="text-xl font-bold text-white mb-5">Игроки</h2><div className="space-y-2">{users.data.map((u:any)=><div key={u.id} className="card flex items-center justify-between"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-xl bg-white/[0.04] flex items-center justify-center text-white/30 text-sm font-bold">{(u.nickname||u.email[0]).charAt(0).toUpperCase()}</div><div><span className="text-white font-medium text-sm">{u.nickname||u.email}</span><div className="flex gap-2 mt-0.5"><span className="badge-draft text-[10px]">{u.role}</span></div></div></div><div className="text-white/20 text-xs font-mono">{u.stats?.totalAnswered||0}</div></div>)}</div></div>}

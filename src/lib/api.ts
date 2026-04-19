@@ -196,9 +196,20 @@ class ApiClient {
   async createQuestion(data: any) {
     return this.request<any>('/questions', { method: 'POST', body: JSON.stringify(data) });
   }
-  async getQuestions(status?: string) {
-    const q = status ? `?status=${status}` : '';
-    return this.request<any[]>(`/questions${q}`);
+  async updateQuestion(id: string, data: any) {
+    return this.request<any>(`/questions/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  }
+  async deleteQuestion(id: string) {
+    return this.request<any>(`/questions/${id}`, { method: 'DELETE' });
+  }
+  async getQuestions(opts: { status?: string; search?: string; onlyUnused?: boolean; sort?: 'new' | 'old' } = {}) {
+    const params = new URLSearchParams();
+    if (opts.status) params.set('status', opts.status);
+    if (opts.search) params.set('search', opts.search);
+    if (opts.onlyUnused) params.set('onlyUnused', 'true');
+    if (opts.sort) params.set('sort', opts.sort);
+    const qs = params.toString();
+    return this.request<any[]>(`/questions${qs ? '?' + qs : ''}`);
   }
   async addQuestionToTournament(tournamentId: string, questionId: string) {
     return this.request<any>('/questions/add-to-tournament', {
