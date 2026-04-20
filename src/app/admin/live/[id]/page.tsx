@@ -17,7 +17,67 @@ export default function AdminLivePage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [selectedLang, setSelectedLang] = useState<string>('ru');
+  const [soundOn, setSoundOn] = useState<boolean>(() => typeof window !== 'undefined' && localStorage.getItem('liveSoundOn') !== 'false');
   const socketRef = useRef<Socket | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const lastAnswersCountRef = useRef(0);
+  const lastTimerRef = useRef(0);
+  const lastPhaseRef = useRef<string>('');
+
+  // ═══ Sound effects ═══
+  const playSound = (type: 'tick' | 'ding' | 'victory') => {
+    if (!soundOn) return;
+    try {
+      if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') ctx.resume();
+
+      if (type === 'tick') {
+        // Short low click
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.value = 800;
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.08);
+      } else if (type === 'ding') {
+        // Pleasant bell "ding"
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = 1200;
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.4);
+      } else if (type === 'victory') {
+        // Rising fanfare: C5 -> E5 -> G5 -> C6
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.value = freq;
+          const startTime = ctx.currentTime + i * 0.15;
+          gain.gain.setValueAtTime(0.2, startTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.4);
+          osc.connect(gain).connect(ctx.destination);
+          osc.start(startTime);
+          osc.stop(startTime + 0.4);
+        });
+      }
+    } catch (e) { /* audio blocked */ }
+  };
+
+  const toggleSound = () => {
+    const next = !soundOn;
+    setSoundOn(next);
+    if (typeof window !== 'undefined') localStorage.setItem('liveSoundOn', String(next));
+  };
 
   // Load user and initial state
   useEffect(() => { loadUser(); }, []);
@@ -67,6 +127,66 @@ export default function AdminLivePage() {
     const interval = setInterval(() => fetchState(), 1000);
     return () => clearInterval(interval);
   }, [state?.phase]);
+
+  // ═══ Sound triggers on state changes ═══
+  useEffect(() => {
+    if (!state) return;
+    // Tick-tock last 5 seconds of answering
+    if (state.phase === 'answering' && state.timerSeconds <= 5 && state.timerSeconds > 0 && state.timerSeconds !== lastTimerRef.current) {
+      playSound('tick');
+    }
+    lastTimerRef.current = state.timerSeconds;
+    // Ding on new answer during answering/judging
+    if (state.currentAnswers.length > lastAnswersCountRef.current && (state.phase === 'answering' || state.phase === 'judging')) {
+      playSound('ding');
+    }
+    lastAnswersCountRef.current = state.currentAnswers.length;
+    // Victory when someone wins
+    const hasNewWinner = state.participants.some((p: any) => p.matchStatus === 'WON');
+    if (hasNewWinner && lastPhaseRef.current !== 'won') {
+      playSound('victory');
+      lastPhaseRef.current = 'won';
+    }
+    if (!hasNewWinner) lastPhaseRef.current = state.phase;
+  }, [state, soundOn]);
+
+  // ═══ Hotkeys ═══
+  useEffect(() => {
+    if (!state) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore when typing in inputs
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+
+      // Space — launch next question
+      if (e.code === 'Space') {
+        e.preventDefault();
+        const canLaunch = state.progress.remainingQuestions > 0 && (state.phase === 'idle' || (state.phase === 'judging' && state.currentAnswers.length > 0 && state.currentAnswers.every((a: any) => a.judged)));
+        if (canLaunch && state.tournament.status === 'LIVE') doLaunchQuestion();
+      }
+      // 1 — accept first unjudged
+      if (e.key === '1' && state.phase === 'judging') {
+        e.preventDefault();
+        const unjudged = state.currentAnswers.find((a: any) => !a.judged);
+        if (unjudged) doJudge(unjudged.id, 'ACCEPTED');
+      }
+      // 2 — reject first unjudged
+      if (e.key === '2' && state.phase === 'judging') {
+        e.preventDefault();
+        const unjudged = state.currentAnswers.find((a: any) => !a.judged);
+        if (unjudged) doJudge(unjudged.id, 'REJECTED');
+      }
+      // F — toggle fullscreen
+      if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+        else document.exitFullscreen().catch(() => {});
+      }
+      // Esc handled natively by browser for fullscreen exit
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [state]);
 
   const doLaunchQuestion = async () => {
     setBusy('launch');
@@ -140,7 +260,20 @@ export default function AdminLivePage() {
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-1 text-[10px] text-white/30 font-mono">
+            <kbd className="px-1.5 py-0.5 bg-white/5 rounded border border-white/10">Space</kbd>
+            <span>Запуск</span>
+            <kbd className="ml-2 px-1.5 py-0.5 bg-white/5 rounded border border-white/10">1</kbd>
+            <span>✓</span>
+            <kbd className="ml-1 px-1.5 py-0.5 bg-white/5 rounded border border-white/10">2</kbd>
+            <span>✗</span>
+            <kbd className="ml-2 px-1.5 py-0.5 bg-white/5 rounded border border-white/10">F</kbd>
+            <span>Экран</span>
+          </div>
+          <button onClick={toggleSound} title={soundOn ? 'Звук включён' : 'Звук выключен'} className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 text-sm transition">
+            {soundOn ? '🔊' : '🔇'}
+          </button>
           {tournament.status === 'SCHEDULED' || tournament.status === 'DRAFT' ? (
             <button onClick={doStart} disabled={busy === 'start'} className="btn-primary text-sm">▶ Запустить турнир</button>
           ) : tournament.status === 'LIVE' ? (
@@ -256,7 +389,7 @@ export default function AdminLivePage() {
         {/* ─── LEFT COLUMN: Stage ─── */}
         <div className="space-y-6">
           {/* TIMER & PHASE */}
-          <div key={phase} className="card text-center py-10 relative overflow-hidden animate-fade-in">
+          <div key={phase} className="card text-center py-10 relative overflow-hidden animate-phase-reveal">
             {(phase === 'reading' || phase === 'answering') && (
               <>
                 <div className={`text-[120px] font-black font-mono leading-none ${ps.color} ${timerSeconds <= 5 && phase === 'answering' ? 'animate-pulse' : ''}`}>
@@ -344,7 +477,7 @@ export default function AdminLivePage() {
                     ? (a.decision === 'ACCEPTED' ? 'border-green-500/40 bg-green-500/5' : 'border-red-500/40 bg-red-500/5')
                     : (isMatch ? 'border-green-500/20 bg-green-500/[0.02]' : 'border-white/[0.06]');
                   return (
-                    <div key={a.id} className={`card flex items-center gap-3 ${borderClass}`}>
+                    <div key={a.id} className={`card flex items-center gap-3 animate-answer-in ${borderClass}`}>
                       <div className="w-10 h-10 rounded-xl bg-brand-500/10 flex items-center justify-center text-brand-400 text-sm font-bold shrink-0">
                         {a.nickname[0].toUpperCase()}
                       </div>

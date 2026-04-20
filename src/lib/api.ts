@@ -202,14 +202,24 @@ class ApiClient {
   async deleteQuestion(id: string) {
     return this.request<any>(`/questions/${id}`, { method: 'DELETE' });
   }
-  async getQuestions(opts: { status?: string; search?: string; onlyUnused?: boolean; sort?: 'new' | 'old' } = {}) {
+  async removeQuestionFromTournament(tournamentQuestionId: string) {
+    return this.request<any>(`/questions/tournament-question/${tournamentQuestionId}`, { method: 'DELETE' });
+  }
+  async getQuestions(opts: { status?: string; search?: string; onlyUnused?: boolean; sort?: 'new' | 'old'; location?: 'library' | 'archive' | 'all' } = {}) {
     const params = new URLSearchParams();
     if (opts.status) params.set('status', opts.status);
     if (opts.search) params.set('search', opts.search);
     if (opts.onlyUnused) params.set('onlyUnused', 'true');
     if (opts.sort) params.set('sort', opts.sort);
+    if (opts.location) params.set('location', opts.location);
     const qs = params.toString();
     return this.request<any[]>(`/questions${qs ? '?' + qs : ''}`);
+  }
+  async addQuestionToTournamentForced(tournamentId: string, questionId: string, force = false): Promise<any> {
+    return this.request<any>('/questions/add-to-tournament', {
+      method: 'POST',
+      body: JSON.stringify({ tournamentId, questionId, force }),
+    });
   }
   async addQuestionToTournament(tournamentId: string, questionId: string) {
     return this.request<any>('/questions/add-to-tournament', {

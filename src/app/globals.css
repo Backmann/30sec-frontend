@@ -209,3 +209,22 @@
   .btn-primary, .btn-secondary, .btn-accent { @apply px-5 py-3 text-sm rounded-xl; }
   .score-player, .score-system { @apply text-4xl; }
 }
+
+/* ─── Live page animations ──────────────── */
+@keyframes answer-slide-in {
+  from { opacity: 0; transform: translateX(-16px) scale(0.96); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+.animate-answer-in { animation: answer-slide-in 0.3s cubic-bezier(0.2, 0.8, 0.3, 1.1); }
+
+@keyframes timer-bump {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+.animate-timer-bump { animation: timer-bump 0.2s ease-out; }
+
+@keyframes phase-reveal {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-phase-reveal { animation: phase-reveal 0.4s cubic-bezier(0.2, 0.8, 0.3, 1); }
