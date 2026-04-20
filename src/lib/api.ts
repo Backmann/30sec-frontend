@@ -179,6 +179,11 @@ class ApiClient {
   async getAdminLiveState(id: string) {
     return this.request<any>(`/tournaments/${id}/live-state`);
   }
+  async getPublicLive(id: string): Promise<any> {
+    const res = await fetch(`${this.baseUrl}/tournaments/${id}/public-live`);
+    if (!res.ok) throw new Error('Public live not available');
+    return res.json();
+  }
   async getGameState(id: string) {
     return this.request<any>(`/tournaments/${id}/game-state`);
   }
