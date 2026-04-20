@@ -106,16 +106,18 @@ export default function AdminLivePage() {
     };
   }, [user, tournamentId]);
 
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const fetchState = async () => {
     try {
       const data = await api.getAdminLiveState(tournamentId);
       setState(data);
-      // Default language from first available localization
+      setFetchError(null);
       if (data?.currentQuestion?.localizations?.length && !data.currentQuestion.localizations.find((l: any) => l.language === selectedLang)) {
         setSelectedLang(data.currentQuestion.localizations[0].language);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to fetch live state', e);
+      setFetchError(e?.message || 'Не удалось загрузить турнир');
     } finally {
       setLoading(false);
     }
@@ -218,6 +220,19 @@ export default function AdminLivePage() {
     finally { setBusy(null); }
   };
 
+  if (fetchError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+        <div className="text-5xl mb-4">⚠️</div>
+        <div className="text-xl text-white font-semibold mb-2">Не удалось загрузить трансляцию</div>
+        <div className="text-white/50 text-sm mb-6 max-w-md">{fetchError}</div>
+        <div className="flex gap-3">
+          <button onClick={() => router.push('/admin')} className="btn-primary">В админку</button>
+          <button onClick={() => { setFetchError(null); setLoading(true); fetchState(); }} className="btn-ghost">Попробовать снова</button>
+        </div>
+      </div>
+    );
+  }
   if (loading || !state) {
     return <div className="min-h-screen flex items-center justify-center text-white/40">Загрузка трансляции…</div>;
   }
@@ -252,9 +267,15 @@ export default function AdminLivePage() {
           <button onClick={() => router.push('/admin')} className="text-white/40 hover:text-white text-sm">← Админка</button>
           <div>
             <h1 className="text-2xl font-bold text-white">{tournament.title}</h1>
-            <div className="text-white/40 text-sm flex items-center gap-3 mt-1">
+            <div className="text-white/40 text-sm flex items-center gap-3 mt-1 flex-wrap">
               <span className={`${ps.bg} ${ps.color} px-2 py-0.5 rounded-lg text-xs font-semibold`}>{ps.label}</span>
-              <span>Вопрос {progress.currentQuestionNumber} / {progress.totalQuestions}</span>
+              {isPreStart && timeUntilStart > 0 && (
+                <span className="text-brand-400 font-mono font-semibold">
+                  старт через {Math.floor(timeUntilStart / 60).toString().padStart(2, '0')}:{(timeUntilStart % 60).toString().padStart(2, '0')}
+                </span>
+              )}
+              {isPreStart && timeUntilStart === 0 && <span className="text-green-400 font-semibold">готов к запуску</span>}
+              {!isPreStart && <span>Вопрос {progress.currentQuestionNumber} / {progress.totalQuestions}</span>}
               <span>· {participants.length} игроков</span>
               {spectatorCount > 0 && <span>· 👁 {spectatorCount}</span>}
             </div>
@@ -305,12 +326,17 @@ export default function AdminLivePage() {
             </button>
           </div>
           <div className="card">
-            <div className="section-title mb-4">Одобренные участники · {participants.length}</div>
+            <div className="section-title mb-4 flex items-center justify-between">
+              <span>Одобренные участники · {participants.length}</span>
+              {participants.length > 0 && spectatorCount > 0 && (
+                <span className="text-green-400/80 text-xs font-normal">👁 {spectatorCount} на странице игры</span>
+              )}
+            </div>
             {participants.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {participants.map((p: any) => (
                   <div key={p.id} className="flex items-center gap-2 py-2 px-3 rounded-xl bg-white/[0.03]">
-                    <div className="w-8 h-8 rounded-lg bg-brand-500/10 flex items-center justify-center text-brand-400 text-xs font-bold">
+                    <div className="w-8 h-8 rounded-lg bg-brand-500/10 flex items-center justify-center text-brand-400 text-xs font-bold relative">
                       {p.nickname[0].toUpperCase()}
                     </div>
                     <div className="min-w-0">
@@ -322,6 +348,9 @@ export default function AdminLivePage() {
               </div>
             ) : (
               <div className="text-white/30 text-sm text-center py-6">Пока нет одобренных заявок</div>
+            )}
+            {participants.length > 0 && spectatorCount === 0 && (
+              <div className="mt-3 text-amber-400/70 text-xs text-center">⚠️ Никто ещё не открыл страницу игры. Попросите игроков подключиться.</div>
             )}
           </div>
         </div>
