@@ -205,15 +205,25 @@ class ApiClient {
   async removeQuestionFromTournament(tournamentQuestionId: string) {
     return this.request<any>(`/questions/tournament-question/${tournamentQuestionId}`, { method: 'DELETE' });
   }
-  async getQuestions(opts: { status?: string; search?: string; onlyUnused?: boolean; sort?: 'new' | 'old'; location?: 'library' | 'archive' | 'all' } = {}) {
+  async getArchiveDetails(questionId: string) {
+    return this.request<any>(`/questions/${questionId}/archive-details`);
+  }
+  async returnQuestionToLibrary(questionId: string) {
+    return this.request<any>(`/questions/${questionId}/return-to-library`, { method: 'POST' });
+  }
+  async getQuestions(opts: { status?: string; search?: string; onlyUnused?: boolean; sort?: 'new' | 'old'; location?: 'library' | 'archive' | 'all'; tournamentId?: string } = {}) {
     const params = new URLSearchParams();
     if (opts.status) params.set('status', opts.status);
     if (opts.search) params.set('search', opts.search);
     if (opts.onlyUnused) params.set('onlyUnused', 'true');
     if (opts.sort) params.set('sort', opts.sort);
     if (opts.location) params.set('location', opts.location);
+    if (opts.tournamentId) params.set('tournamentId', opts.tournamentId);
     const qs = params.toString();
     return this.request<any[]>(`/questions${qs ? '?' + qs : ''}`);
+  }
+  async getArchiveTournaments() {
+    return this.request<any[]>('/questions/archive/tournaments');
   }
   async addQuestionToTournamentForced(tournamentId: string, questionId: string, force = false): Promise<any> {
     return this.request<any>('/questions/add-to-tournament', {

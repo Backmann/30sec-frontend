@@ -40,6 +40,10 @@ export default function AdminPage() {
   const [qSubtab, setQSubtab] = useState<'library' | 'byTournament' | 'archive'>('library');
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [linkDropdownId, setLinkDropdownId] = useState<string | null>(null); // which question's dropdown is open
+  const [archiveDetailsId, setArchiveDetailsId] = useState<string | null>(null); // which archive item is expanded
+  const [archiveCache, setArchiveCache] = useState<Record<string, any>>({}); // cached details per question
+  const [archiveTournaments, setArchiveTournaments] = useState<any[]>([]); // tournaments in archive
+  const [archiveFilterTId, setArchiveFilterTId] = useState<string>(''); // '' = all
   const [qLibrary, setQLibrary] = useState<any[]>([]);
   const [qSearch, setQSearch] = useState('');
   const [qOnlyUnused, setQOnlyUnused] = useState(false);
@@ -86,11 +90,18 @@ export default function AdminPage() {
     if (tab !== 'questions' || (qSubtab !== 'library' && qSubtab !== 'archive')) return;
     const delay = setTimeout(() => {
       const location = qSubtab === 'archive' ? 'archive' : 'library';
-      api.getQuestions({ search: qSearch, sort: qSort, location })
+      const tournamentId = qSubtab === 'archive' && archiveFilterTId ? archiveFilterTId : undefined;
+      api.getQuestions({ search: qSearch, sort: qSort, location, tournamentId })
         .then(setQLibrary).catch(() => {});
     }, 250);
     return () => clearTimeout(delay);
-  }, [tab, qSubtab, qSearch, qSort]);
+  }, [tab, qSubtab, qSearch, qSort, archiveFilterTId]);
+
+  // Load archive tournaments list when entering archive
+  useEffect(() => {
+    if (tab !== 'questions' || qSubtab !== 'archive') return;
+    api.getArchiveTournaments().then(setArchiveTournaments).catch(() => {});
+  }, [tab, qSubtab]);
 
   if (loading || !user) return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" /></div>;
 
@@ -181,6 +192,34 @@ export default function AdminPage() {
       }
     } catch (e: any) {
       alert('Ошибка: ' + (e.message || 'не удалось убрать'));
+    }
+  };
+
+  const doExpandArchive = async (q: any) => {
+    if (archiveDetailsId === q.id) {
+      setArchiveDetailsId(null);
+      return;
+    }
+    setArchiveDetailsId(q.id);
+    if (!archiveCache[q.id]) {
+      try {
+        const details = await api.getArchiveDetails(q.id);
+        setArchiveCache(prev => ({ ...prev, [q.id]: details }));
+      } catch (e) { console.error(e); }
+    }
+  };
+
+  const doReturnFromArchive = async (q: any) => {
+    const text = q.localizations?.[0]?.questionText || '';
+    if (!confirm(`Вернуть вопрос в библиотеку?\n\n"${text.slice(0, 80)}${text.length > 80 ? '...' : ''}"\n\nЭтот вопрос уже игрался. После возврата его можно будет снова использовать в турнирах. При повторном добавлении появится предупреждение.`)) return;
+    try {
+      await api.returnQuestionToLibrary(q.id);
+      // Перезагружаем текущий список
+      const list = await api.getQuestions({ search: qSearch, sort: qSort, location: 'archive' });
+      setQLibrary(list);
+      refresh();
+    } catch (e: any) {
+      alert('Ошибка: ' + (e.message || 'не удалось вернуть'));
     }
   };
 
@@ -477,6 +516,12 @@ export default function AdminPage() {
                   <option value="new">Сначала новые</option>
                   <option value="old">Сначала старые</option>
                 </select>
+                {qSubtab === 'archive' && archiveTournaments.length > 1 && (
+                  <select value={archiveFilterTId} onChange={e => setArchiveFilterTId(e.target.value)} className="input-field text-sm sm:w-56">
+                    <option value="">Все турниры</option>
+                    {archiveTournaments.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
+                  </select>
+                )}
               </div>
 
               <div className="text-white/30 text-xs mb-3">Найдено: {qLibrary.length}</div>
@@ -487,8 +532,11 @@ export default function AdminPage() {
                 <div className="space-y-2">
                   {qLibrary.map((q: any) => {
                     const loc = q.localizations?.find((l: any) => l.language === 'ru') || q.localizations?.[0];
+                    const details = archiveCache[q.id];
+                    const isExpanded = archiveDetailsId === q.id;
                     return (
-                      <div key={q.id} className="card py-3 px-4">
+                      <div key={q.id}>
+                      <div className="card py-3 px-4">
                         <div className="flex items-start gap-3">
                           <div className="flex-1 min-w-0">
                             <div className="text-white text-sm">{loc?.questionText || '(пусто)'}</div>
@@ -507,10 +555,51 @@ export default function AdminPage() {
                               <button onClick={() => doEditQ(q)} title="Редактировать" className="w-8 h-8 rounded-lg bg-white/[0.03] hover:bg-brand-500/20 text-white/40 hover:text-brand-400 text-sm transition">✏️</button>
                               <button onClick={() => doDeleteQ(q)} title="Удалить" disabled={q.inUpcoming} className="w-8 h-8 rounded-lg bg-white/[0.03] hover:bg-red-500/20 text-white/40 hover:text-red-400 text-sm transition disabled:opacity-30 disabled:cursor-not-allowed">🗑</button>
                             </>}
-                            {qSubtab === 'archive' && <span className="text-[10px] text-white/30 italic self-center px-2">архив</span>}
+                            {qSubtab === 'archive' && <>
+                              <button onClick={() => doExpandArchive(q)} title={archiveDetailsId === q.id ? 'Свернуть' : 'История'} className="w-8 h-8 rounded-lg bg-white/[0.03] hover:bg-brand-500/20 text-white/40 hover:text-brand-400 text-sm transition">{archiveDetailsId === q.id ? '▲' : '▼'}</button>
+                              <button onClick={() => doReturnFromArchive(q)} title="Вернуть в библиотеку" className="w-8 h-8 rounded-lg bg-white/[0.03] hover:bg-amber-500/20 text-white/40 hover:text-amber-400 text-sm transition">↻</button>
+                            </>}
 
                           </div>
                         </div>
+                      </div>
+                      {qSubtab === 'archive' && isExpanded && details && (
+                        <div className="card mt-1 p-4 border-l-2 border-brand-500/30 bg-white/[0.02] animate-fade-in">
+                          <div className="flex flex-wrap gap-3 text-xs mb-4 pb-3 border-b border-white/[0.06]">
+                            <span className="text-white/40">Сыгран:</span>
+                            <span className="text-white font-semibold">{details.playedTimes} {details.playedTimes === 1 ? 'раз' : 'раза'}</span>
+                            <span className="text-white/20">·</span>
+                            <span className="text-white/40">Ответов:</span>
+                            <span className="text-white font-semibold">{details.correctAnswers} / {details.totalAnswers}</span>
+                            <span className="text-white/20">·</span>
+                            <span className="text-white/40">Успех:</span>
+                            <span className={`font-bold ${details.successRate >= 70 ? 'text-green-400' : details.successRate >= 40 ? 'text-amber-400' : 'text-red-400'}`}>{details.successRate}%</span>
+                          </div>
+                          {details.history.map((h: any) => (
+                            <div key={h.tournamentQuestionId} className="mb-3 last:mb-0">
+                              <div className="flex items-center gap-2 mb-2 text-sm">
+                                <span className="text-brand-400 font-semibold">{h.tournament.title}</span>
+                                <span className="text-white/30 text-xs">{h.tournament.endAt ? new Date(h.tournament.endAt).toLocaleString('ru-RU', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'}) : new Date(h.tournament.startAt).toLocaleString('ru-RU', {day:'2-digit', month:'short', year:'numeric'})}</span>
+                              </div>
+                              {h.noAnswers ? (
+                                <div className="text-white/30 text-xs italic px-2 py-2">Никто не ответил</div>
+                              ) : (
+                                <div className="space-y-1">
+                                  {h.answers.map((a: any) => (
+                                    <div key={a.id} className="flex items-center gap-2 text-xs py-1.5 px-2 rounded-lg bg-white/[0.02]">
+                                      <span className={`${a.decision === 'ACCEPTED' ? 'text-green-400' : a.decision === 'REJECTED' ? 'text-red-400' : 'text-white/30'}`}>{a.decision === 'ACCEPTED' ? '✓' : a.decision === 'REJECTED' ? '✗' : '—'}</span>
+                                      <span className="text-white font-medium">{a.nickname}</span>
+                                      {a.flagCode && <span className="text-white/30 text-[10px] uppercase">{a.flagCode}</span>}
+                                      <span className="text-white/40 flex-1 truncate">"{a.answerText || '(пусто)'}"</span>
+                                      {a.relSeconds !== null && <span className="text-white/30 text-[10px] font-mono shrink-0">+{a.relSeconds}с</span>}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       </div>
                     );
                   })}
