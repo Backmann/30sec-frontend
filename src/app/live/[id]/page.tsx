@@ -177,6 +177,26 @@ export default function PublicLivePage() {
               <div className={`card ${projectorMode ? 'max-w-6xl' : 'max-w-4xl'} w-full py-8 px-10 text-center`}>
                 <div className="text-[10px] uppercase tracking-[0.2em] text-white/30 mb-3">Вопрос {progress.currentQuestionNumber}</div>
                 <div className={`${projectorMode ? 'text-5xl' : 'text-3xl'} font-semibold leading-tight`}>{loc.questionText}</div>
+                {currentQuestion.questionImages && currentQuestion.questionImages.length > 0 && (
+                  <div className={`grid gap-3 mt-6 ${currentQuestion.questionImages.length === 1 ? 'grid-cols-1' : currentQuestion.questionImages.length <= 4 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                    {currentQuestion.questionImages.map((img: any, i: number) => (
+                      <img key={img.id || i} src={img.url} alt="" className="w-full aspect-video object-cover rounded-xl border border-white/10" />
+                    ))}
+                  </div>
+                )}
+                {phase === 'judging' && currentQuestion.answerImages && currentQuestion.answerImages.length > 0 && (
+                  <div className="mt-6 pt-6 border-t border-white/10">
+                    <div className="text-[10px] uppercase tracking-[0.2em] text-green-400 mb-3">Правильный ответ</div>
+                    <div className={`grid gap-3 ${currentQuestion.answerImages.length === 1 ? 'grid-cols-1' : currentQuestion.answerImages.length <= 4 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                      {currentQuestion.answerImages.map((img: any, i: number) => (
+                        <div key={img.id || i} className="space-y-1">
+                          <img src={img.url} alt="" className="w-full aspect-video object-cover rounded-xl border border-green-500/30" />
+                          {img.caption && <div className="text-white/70 text-sm">{img.caption}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

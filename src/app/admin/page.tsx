@@ -3,6 +3,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/store';
 import { api } from '@/lib/api';
+import ImageUploader, { UploadedImage } from '@/components/ImageUploader';
+import ImageLightbox from '@/components/ImageLightbox';
 import io from 'socket.io-client';
 
 type Tab = 'dashboard' | 'tournaments' | 'questions' | 'users' | 'logs';
@@ -39,6 +41,10 @@ export default function AdminPage() {
   // Questions library state
   const [qSubtab, setQSubtab] = useState<'library' | 'byTournament' | 'archive'>('library');
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  const [qfQuestionImages, setQfQuestionImages] = useState<UploadedImage[]>([]);
+  const [lightboxImages, setLightboxImages] = useState<any[] | null>(null);
+  const [lightboxStart, setLightboxStart] = useState(0);
+  const [qfAnswerImages, setQfAnswerImages] = useState<UploadedImage[]>([]);
   const [linkDropdownId, setLinkDropdownId] = useState<string | null>(null); // which question's dropdown is open
   const [archiveDetailsId, setArchiveDetailsId] = useState<string | null>(null); // which archive item is expanded
   const [archiveCache, setArchiveCache] = useState<Record<string, any>>({}); // cached details per question
@@ -125,17 +131,22 @@ export default function AdminPage() {
       if (qF.ru_t) locs.push({ language: 'ru', questionText: qF.ru_t, correctAnswer: qF.ru_a });
       if (qF.de_t) locs.push({ language: 'de', questionText: qF.de_t, correctAnswer: qF.de_a });
       if (qF.en_t) locs.push({ language: 'en', questionText: qF.en_t, correctAnswer: qF.en_a });
+      const payload: any = {
+        localizations: locs,
+        questionImages: qfQuestionImages.map(({ url, r2Key, caption }) => ({ url, r2Key, caption })),
+        answerImages: qfAnswerImages.map(({ url, r2Key, caption }) => ({ url, r2Key, caption })),
+      };
       if (editingQuestionId) {
-        // Update existing question
-        await api.updateQuestion(editingQuestionId, { localizations: locs });
+        await api.updateQuestion(editingQuestionId, payload);
       } else {
-        // Create new
-        const q = await api.createQuestion({ category: 'LOGIC', localizations: locs });
+        const q = await api.createQuestion({ category: 'LOGIC', ...payload });
         if (qF.tid) {
           await api.addQuestionToTournament(qF.tid, q.id);
         }
       }
       setQF({ tid: qF.tid, ru_t: '', ru_a: '', de_t: '', de_a: '', en_t: '', en_a: '' });
+      setQfQuestionImages([]);
+      setQfAnswerImages([]);
       setShowQF(false);
       setEditingQuestionId(null);
       refresh();
@@ -149,10 +160,15 @@ export default function AdminPage() {
     }
   };
 
-  const doEditQ = (q: any) => {
-    const ru = q.localizations?.find((l: any) => l.language === 'ru');
-    const de = q.localizations?.find((l: any) => l.language === 'de');
-    const en = q.localizations?.find((l: any) => l.language === 'en');
+  const doEditQ = async (q: any) => {
+    // Load full question details including images
+    let full: any = q;
+    try { full = await api.getQuestion(q.id); } catch {}
+    const ru = full.localizations?.find((l: any) => l.language === 'ru');
+    const de = full.localizations?.find((l: any) => l.language === 'de');
+    const en = full.localizations?.find((l: any) => l.language === 'en');
+    setQfQuestionImages((full.questionImages || []).map((img: any) => ({ url: img.url, r2Key: img.r2Key, caption: img.caption || '' })));
+    setQfAnswerImages((full.answerImages || []).map((img: any) => ({ url: img.url, r2Key: img.r2Key, caption: img.caption || '' })));
     setQF({
       tid: '',
       ru_t: ru?.questionText || '', ru_a: ru?.correctAnswerLocalized || '',
@@ -501,7 +517,10 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {showQF && <div className="card mb-5 space-y-3 animate-slide-down"><div className="text-sm font-semibold text-white/70 mb-2">{editingQuestionId ? '✏️ Редактирование вопроса' : '➕ Новый вопрос'}</div>{!editingQuestionId && <div><label className="input-label">Турнир (опционально)</label><select value={qF.tid} onChange={e=>setQF({...qF,tid:e.target.value})} className="input-field"><option value="">— не привязывать —</option>{tournaments.filter(t=>t.status!=='FINISHED').map(t=><option key={t.id} value={t.id}>{t.title} ({qc(t)}/{RQ})</option>)}</select></div>}{['ru','de','en'].map(l=><div key={l}><label className="input-label">{l.toUpperCase()}</label><div className="flex gap-2"><input value={(qF as any)[l+'_t']} onChange={e=>setQF({...qF,[l+'_t']:e.target.value})} className="input-field flex-1 text-sm" placeholder={'Вопрос ('+l+')'} /><input value={(qF as any)[l+'_a']} onChange={e=>setQF({...qF,[l+'_a']:e.target.value})} className="input-field w-32 sm:w-40 text-sm" placeholder="Ответ" /></div></div>)}<div className="flex gap-2"><button onClick={doCreateQ} className="btn-primary text-sm">{editingQuestionId ? 'Сохранить' : 'Создать'}</button><button onClick={()=>{ setShowQF(false); setEditingQuestionId(null); }} className="btn-ghost text-sm">Отмена</button></div></div>}
+            {showQF && <div className="card mb-5 space-y-3 animate-slide-down"><div className="text-sm font-semibold text-white/70 mb-2">{editingQuestionId ? '✏️ Редактирование вопроса' : '➕ Новый вопрос'}</div>{!editingQuestionId && <div><label className="input-label">Турнир (опционально)</label><select value={qF.tid} onChange={e=>setQF({...qF,tid:e.target.value})} className="input-field"><option value="">— не привязывать —</option>{tournaments.filter(t=>t.status!=='FINISHED').map(t=><option key={t.id} value={t.id}>{t.title} ({qc(t)}/{RQ})</option>)}</select></div>}{['ru','de','en'].map(l=><div key={l}><label className="input-label">{l.toUpperCase()}</label><div className="flex gap-2"><input value={(qF as any)[l+'_t']} onChange={e=>setQF({...qF,[l+'_t']:e.target.value})} className="input-field flex-1 text-sm" placeholder={'Вопрос ('+l+')'} /><input value={(qF as any)[l+'_a']} onChange={e=>setQF({...qF,[l+'_a']:e.target.value})} className="input-field w-32 sm:w-40 text-sm" placeholder="Ответ" /></div></div>)}
+              <div className="pt-2 border-t border-white/[0.06]"><ImageUploader images={qfQuestionImages} onChange={setQfQuestionImages} category="question" label="🖼 Изображения к вопросу (до 10)" /></div>
+              <div className="pt-2"><ImageUploader images={qfAnswerImages} onChange={setQfAnswerImages} category="answer" label="🎯 Изображения к правильному ответу (до 10)" /></div>
+              <div className="flex gap-2 pt-2"><button onClick={doCreateQ} className="btn-primary text-sm">{editingQuestionId ? 'Сохранить' : 'Создать'}</button><button onClick={()=>{ setShowQF(false); setEditingQuestionId(null); setQfQuestionImages([]); setQfAnswerImages([]); }} className="btn-ghost text-sm">Отмена</button></div></div>}
 
             {/* ─── LIBRARY / ARCHIVE SUBTAB ─── */}
             {(qSubtab === 'library' || qSubtab === 'archive') && <div>
@@ -538,6 +557,16 @@ export default function AdminPage() {
                       <div key={q.id}>
                       <div className="card py-3 px-4">
                         <div className="flex items-start gap-3">
+                          {q.questionImages && q.questionImages.length > 0 && (
+                            <div className="flex gap-1 shrink-0">
+                              {q.questionImages.slice(0, 3).map((img: any, i: number) => (
+                                <img key={img.id || i} src={img.url} alt="" onClick={() => { setLightboxImages(q.questionImages); setLightboxStart(i); }} className="w-10 h-10 rounded-lg object-cover border border-white/10 cursor-pointer hover:border-brand-400/60 transition" />
+                              ))}
+                              {q.questionImages.length > 3 && (
+                                <div onClick={() => { setLightboxImages(q.questionImages); setLightboxStart(3); }} className="w-10 h-10 rounded-lg border border-white/10 bg-white/5 flex items-center justify-center text-white/40 text-[10px] cursor-pointer hover:bg-white/10 transition">+{q.questionImages.length - 3}</div>
+                              )}
+                            </div>
+                          )}
                           <div className="flex-1 min-w-0">
                             <div className="text-white text-sm">{loc?.questionText || '(пусто)'}</div>
                             {loc?.correctAnswerLocalized && <div className="text-green-400/60 text-xs mt-0.5">→ {loc.correctAnswerLocalized}</div>}
@@ -613,6 +642,9 @@ export default function AdminPage() {
               {tournaments.filter(t=>t.status!=='FINISHED').length === 0 && <div className="card py-8 text-center text-white/30 text-sm">Нет активных турниров</div>}
             </div>}
           </div>}
+
+          {/* ─── Image lightbox ─── */}
+          {lightboxImages && <ImageLightbox images={lightboxImages} startIndex={lightboxStart} onClose={() => setLightboxImages(null)} />}
 
           {/* ─── Link question to tournament modal ─── */}
           {linkDropdownId && (() => {

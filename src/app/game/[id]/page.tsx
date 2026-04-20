@@ -1,4 +1,5 @@
 'use client';
+import ImageLightbox from '@/components/ImageLightbox';
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/store';
@@ -23,6 +24,8 @@ export default function GamePage() {
   const [showTimer, setShowTimer] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [stateLoaded, setStateLoaded] = useState(false);
+  const [lightboxStart, setLightboxStart] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const [restoredQId, setRestoredQId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -258,6 +261,13 @@ export default function GamePage() {
             <div className="mb-6">
               <span className="text-xs uppercase text-white/30">{t.game.question} #{(questionData?.index ?? 0) + 1}</span>
               <p className="text-xl sm:text-2xl text-white font-bold mt-2 leading-relaxed">{questionData?.text}</p>
+              {ws.question?.questionImages && ws.question.questionImages.length > 0 && (
+                <div className={`grid gap-2 mt-4 ${ws.question.questionImages.length === 1 ? 'grid-cols-1' : ws.question.questionImages.length <= 4 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                  {ws.question.questionImages.map((img: any, i: number) => (
+                    <img key={img.id || i} src={img.url} alt="" onClick={() => { setLightboxStart(i); setLightboxOpen(true); }} className="w-full aspect-square object-cover rounded-xl border border-white/10 cursor-pointer hover:border-brand-400/60 transition" />
+                  ))}
+                </div>
+              )}
             </div>
             {!submitted ? (
               <div>
@@ -317,6 +327,9 @@ export default function GamePage() {
           </div>
         )}
       </main>
+      {lightboxOpen && ws.question?.questionImages && (
+        <ImageLightbox images={ws.question.questionImages} startIndex={lightboxStart} onClose={() => setLightboxOpen(false)} />
+      )}
     </div>
   );
 }

@@ -15,6 +15,7 @@ interface GameState {
     category: string;
     questionId?: string;
     localizations: { language: string; questionText: string }[];
+    questionImages?: any[];
   } | null;
   timerSeconds: number;
   isLocked: boolean;
@@ -59,7 +60,7 @@ export function useSocket({ tournamentId, token, isAdmin }: UseSocketOptions) {
       if (data.questionId) {
         setState(s => ({
           ...s,
-          question: { orderIndex: data.orderIndex, category: 'LOGIC', questionId: data.questionId, localizations: data.localizations },
+          question: { orderIndex: data.orderIndex, category: 'LOGIC', questionId: data.questionId, localizations: data.localizations, questionImages: data.questionImages || [] },
           phase: data.phase, timerSeconds: data.timerSeconds, isLocked: data.phase === 'locked',
         }));
       }
@@ -71,7 +72,7 @@ export function useSocket({ tournamentId, token, isAdmin }: UseSocketOptions) {
     socket.on('question_started', (data) => {
       setState(s => ({
         ...s,
-        question: { orderIndex: data.orderIndex, category: data.category, questionId: data.questionId, localizations: data.localizations },
+        question: { orderIndex: data.orderIndex, category: data.category, questionId: data.questionId, localizations: data.localizations, questionImages: data.questionImages || [] },
         timerSeconds: 0, isLocked: false, phase: data.phase || 'reading', answers: [], lastJudgement: null,
       }));
     });

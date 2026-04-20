@@ -230,6 +230,39 @@ class ApiClient {
   async getArchiveTournaments() {
     return this.request<any[]>('/questions/archive/tournaments');
   }
+  async getQuestion(id: string) {
+    return this.request<any>(`/questions/${id}`);
+  }
+
+  // ─── Image uploads (R2) ─────────────────────────
+  async getPresignedUploadUrl(opts: { category: 'question' | 'answer'; contentType: string; contentLength?: number }) {
+    return this.request<{ uploadUrl: string; publicUrl: string; key: string }>('/uploads/presigned', {
+      method: 'POST',
+      body: JSON.stringify(opts),
+    });
+  }
+
+  // Full upload cycle: get presigned → PUT file to R2 → return the public URL + r2 key
+  async uploadImage(file: File, category: 'question' | 'answer') {
+    if (!file.type.startsWith('image/')) throw new Error('Только изображения');
+    if (file.size > 5 * 1024 * 1024) throw new Error('Максимум 5 MB');
+    const { uploadUrl, publicUrl, key } = await this.getPresignedUploadUrl({
+      category,
+      contentType: file.type,
+      contentLength: file.size,
+    });
+    const putRes = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type },
+      body: file,
+    });
+    if (!putRes.ok) throw new Error(`Ошибка загрузки: ${putRes.status}`);
+    return { url: publicUrl, r2Key: key };
+  }
+
+  async deleteImage(r2Key: string) {
+    return this.request<any>(`/uploads/${encodeURIComponent(r2Key)}`, { method: 'DELETE' });
+  }
   async addQuestionToTournamentForced(tournamentId: string, questionId: string, force = false): Promise<any> {
     return this.request<any>('/questions/add-to-tournament', {
       method: 'POST',
