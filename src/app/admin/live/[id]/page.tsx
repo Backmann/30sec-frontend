@@ -107,6 +107,18 @@ export default function AdminLivePage() {
   }, [user, tournamentId]);
 
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [shareToast, setShareToast] = useState<string | null>(null);
+
+  const copyUrl = async (path: string, label: string) => {
+    const url = `${window.location.origin}${path}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareToast(`${label} скопировано`);
+      setTimeout(() => setShareToast(null), 2000);
+    } catch {
+      prompt('Скопируйте ссылку:', url);
+    }
+  };
   const fetchState = async () => {
     try {
       const data = await api.getAdminLiveState(tournamentId);
