@@ -273,6 +273,11 @@ export default function AdminLivePage() {
 
   return (
     <div className="min-h-screen p-4 sm:p-6">
+      {shareToast && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-green-500/90 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-2xl backdrop-blur">
+          ✓ {shareToast}
+        </div>
+      )}
       {/* ═══ Header ═══ */}
       <header className="flex items-center justify-between mb-6 pb-4 border-b border-white/[0.06]">
         <div className="flex items-center gap-4">
@@ -304,6 +309,15 @@ export default function AdminLivePage() {
             <kbd className="ml-2 px-1.5 py-0.5 bg-white/5 rounded border border-white/10">F</kbd>
             <span>Экран</span>
           </div>
+          {phase === 'reading' && (
+            <button
+              onClick={async () => { try { await api.extendReading(tournamentId); } catch {} }}
+              title="Добавить 10 сек на чтение"
+              className="h-9 px-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 flex items-center gap-1 text-xs font-semibold transition"
+            >⏱ +10с</button>
+          )}
+          <button onClick={() => copyUrl(`/live/${tournamentId}`, 'OBS-ссылка')} title="Ссылка для OBS / стрима (без спойлеров)" className="h-9 px-3 rounded-xl bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 flex items-center gap-1 text-xs font-semibold transition">🎬 OBS</button>
+          <button onClick={() => copyUrl(`/watch/${tournamentId}`, 'Ссылка для зрителей')} title="Ссылка для зрителей (реакции + личный счёт)" className="h-9 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 flex items-center gap-1 text-xs font-semibold transition">👁 Зрителям</button>
           <button onClick={toggleSound} title={soundOn ? 'Звук включён' : 'Звук выключен'} className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 text-sm transition">
             {soundOn ? '🔊' : '🔇'}
           </button>

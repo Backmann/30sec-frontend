@@ -233,6 +233,19 @@ class ApiClient {
   async getQuestion(id: string) {
     return this.request<any>(`/questions/${id}`);
   }
+  async extendReading(tournamentId: string) {
+    return this.request<any>(`/tournaments/${tournamentId}/extend-reading`, { method: 'POST' });
+  }
+  async bulkAddToTournament(tournamentId: string, questionIds: string[]) {
+    return this.request<any>('/questions/bulk-add-to-tournament', {
+      method: 'POST', body: JSON.stringify({ tournamentId, questionIds }),
+    });
+  }
+  async autoFillTournament(tournamentId: string, count = 23) {
+    return this.request<any>('/questions/auto-fill-tournament', {
+      method: 'POST', body: JSON.stringify({ tournamentId, count }),
+    });
+  }
 
   // ─── Image uploads (R2) ─────────────────────────
   async getPresignedUploadUrl(opts: { category: 'question' | 'answer'; contentType: string; contentLength?: number }) {

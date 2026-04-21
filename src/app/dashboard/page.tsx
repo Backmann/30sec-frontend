@@ -86,7 +86,11 @@ export default function DashboardPage() {
           {isAdmin ? <button onClick={() => router.push('/admin')} className="btn-secondary w-full mt-4 text-center text-sm">⚙️ Управлять турниром</button>
           : st === null ? <button onClick={() => doApply(tr.id)} className="btn-primary w-full mt-4 text-center text-sm">Подать заявку</button>
           : st === 'PENDING' ? <div className="w-full mt-4 text-center text-sm bg-amber-500/10 border border-amber-500/20 rounded-2xl py-3 text-amber-400">⏳ Заявка отправлена</div>
-          : st === 'APPROVED' ? <div className="w-full mt-4 text-center text-sm bg-green-500/10 border border-green-500/20 rounded-2xl py-3 text-green-400">✅ Заявка одобрена</div>
+          : st === 'APPROVED' ? <div className="mt-4 space-y-2">
+              <div className="w-full text-center text-sm bg-green-500/10 border border-green-500/20 rounded-2xl py-3 text-green-400">✅ Заявка одобрена</div>
+              <button onClick={(e) => { e.stopPropagation(); router.push(`/game/${tr.id}`); }} className="btn-primary w-full text-center text-sm">🚪 Войти в зал ожидания</button>
+              <div className="text-center text-xs text-white/40">Уже можно заходить — админ запустит игру, когда все будут готовы</div>
+            </div>
           : st === 'REJECTED' ? <div className="w-full mt-4 text-center text-sm bg-red-500/10 border border-red-500/20 rounded-2xl py-3 text-red-400">✗ Заявка отклонена</div>
           : null}
           </div>;

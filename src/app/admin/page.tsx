@@ -51,6 +51,41 @@ export default function AdminPage() {
   const [archiveTournaments, setArchiveTournaments] = useState<any[]>([]); // tournaments in archive
   const [archiveFilterTId, setArchiveFilterTId] = useState<string>(''); // '' = all
   const [qLibrary, setQLibrary] = useState<any[]>([]);
+  const [selectedQ, setSelectedQ] = useState<Set<string>>(new Set());
+  const [bulkTarget, setBulkTarget] = useState<string>('');
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  const toggleSelected = (id: string) => {
+    const next = new Set(selectedQ);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setSelectedQ(next);
+  };
+  const doBulkAdd = async () => {
+    if (!bulkTarget || selectedQ.size === 0) return;
+    setBulkBusy(true);
+    try {
+      await api.bulkAddToTournament(bulkTarget, Array.from(selectedQ));
+      alert(`Добавлено ${selectedQ.size} вопросов`);
+      setSelectedQ(new Set());
+      setBulkTarget('');
+      refresh();
+      const list = await api.getQuestions({ search: qSearch, sort: qSort, location: 'library' });
+      setQLibrary(list);
+    } catch (e: any) {
+      alert('Ошибка: ' + (e.message || ''));
+    }
+    setBulkBusy(false);
+  };
+  const doAutoFill = async (tournamentId: string) => {
+    if (!confirm('Заполнить случайными свободными вопросами до 23?')) return;
+    try {
+      const res = await api.autoFillTournament(tournamentId, 23);
+      alert(`Добавлено ${res.added} вопросов. Всего: ${res.total}`);
+      refresh();
+    } catch (e: any) {
+      alert('Ошибка: ' + (e.message || ''));
+    }
+  };
   const [qSearch, setQSearch] = useState('');
   const [qOnlyUnused, setQOnlyUnused] = useState(false);
   const [qSort, setQSort] = useState<'new' | 'old'>('new');
@@ -555,8 +590,16 @@ export default function AdminPage() {
                     const isExpanded = archiveDetailsId === q.id;
                     return (
                       <div key={q.id}>
-                      <div className="card py-3 px-4">
+                      <div className={`card py-3 px-4 ${selectedQ.has(q.id) ? 'border-brand-500/40 bg-brand-500/5' : ''}`}>
                         <div className="flex items-start gap-3">
+                          {qSubtab === 'library' && (
+                            <input
+                              type="checkbox"
+                              checked={selectedQ.has(q.id)}
+                              onChange={() => toggleSelected(q.id)}
+                              className="mt-1 w-4 h-4 accent-brand-500 cursor-pointer shrink-0"
+                            />
+                          )}
                           {(q.questionImages?.length > 0 || q.answerImages?.length > 0) && (
                             <div className="flex flex-col gap-1 shrink-0">
                               {q.questionImages?.length > 0 && (
@@ -654,10 +697,27 @@ export default function AdminPage() {
 
             {/* ─── BY TOURNAMENT SUBTAB ─── */}
             {qSubtab === 'byTournament' && <div>
-              {tournaments.filter(t=>t.status!=='FINISHED').map(t=>{const tqs=t.tournamentQuestions||[];return <div key={t.id} className="mb-6"><div className="flex items-center gap-2 mb-2 flex-wrap"><h3 className="text-sm font-semibold text-white/50">{t.title}</h3><span className={`text-[10px] font-mono ${tqs.length>=RQ?'text-green-400':'text-amber-400'}`}>{tqs.length}/{RQ}</span>{tqs.length<RQ&&<span className="text-[10px] text-red-400/60">нужно ещё {RQ-tqs.length}</span>}</div>{tqs.length===0?<div className="card py-4 text-white/20 text-sm text-center">Нет вопросов</div>:<div className="space-y-1">{tqs.map((tq:any,i:number)=>{const firstLoc = tq.question?.localizations?.[0]; return <div key={tq.id} className="card py-3 px-4"><div className="flex items-start gap-3"><span className="text-white/20 text-xs font-mono w-6 shrink-0">Q{i+1}</span><div className="flex-1">{tq.question?.localizations?.map((l:any)=><div key={l.id} className="text-white/60 text-sm"><span className="text-white/20 font-mono text-[10px] mr-1">{l.language}</span>{l.questionText}{l.correctAnswerLocalized&&<span className="text-green-400/40 ml-2"> {l.correctAnswerLocalized}</span>}</div>)}</div>{tq.isUsed?<span className="text-[10px] text-green-400 px-2">✓ сыгран</span>:<button onClick={()=>doRemoveFromTournament(tq.id, firstLoc?.questionText||'')} title="Убрать из турнира" className="w-7 h-7 rounded-lg bg-white/[0.03] hover:bg-red-500/20 text-white/40 hover:text-red-400 text-xs transition">➖</button>}</div></div>})}</div>}</div>})}
+              {tournaments.filter(t=>t.status!=='FINISHED').map(t=>{const tqs=t.tournamentQuestions||[];return <div key={t.id} className="mb-6"><div className="flex items-center gap-2 mb-2 flex-wrap"><h3 className="text-sm font-semibold text-white/50">{t.title}</h3><span className={`text-[10px] font-mono ${tqs.length>=RQ?'text-green-400':'text-amber-400'}`}>{tqs.length}/{RQ}</span>{tqs.length<RQ&&<span className="text-[10px] text-red-400/60">нужно ещё {RQ-tqs.length}</span>}{tqs.length<RQ&&<button onClick={()=>doAutoFill(t.id)} className="text-[10px] px-2 py-0.5 rounded-md bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 font-semibold transition" title="Заполнить случайными свободными вопросами">⚡ Заполнить</button>}</div>{tqs.length===0?<div className="card py-4 text-white/20 text-sm text-center">Нет вопросов</div>:<div className="space-y-1">{tqs.map((tq:any,i:number)=>{const firstLoc = tq.question?.localizations?.[0]; return <div key={tq.id} className="card py-3 px-4"><div className="flex items-start gap-3"><span className="text-white/20 text-xs font-mono w-6 shrink-0">Q{i+1}</span><div className="flex-1">{tq.question?.localizations?.map((l:any)=><div key={l.id} className="text-white/60 text-sm"><span className="text-white/20 font-mono text-[10px] mr-1">{l.language}</span>{l.questionText}{l.correctAnswerLocalized&&<span className="text-green-400/40 ml-2"> {l.correctAnswerLocalized}</span>}</div>)}</div>{tq.isUsed?<span className="text-[10px] text-green-400 px-2">✓ сыгран</span>:<button onClick={()=>doRemoveFromTournament(tq.id, firstLoc?.questionText||'')} title="Убрать из турнира" className="w-7 h-7 rounded-lg bg-white/[0.03] hover:bg-red-500/20 text-white/40 hover:text-red-400 text-xs transition">➖</button>}</div></div>})}</div>}</div>})}
               {tournaments.filter(t=>t.status!=='FINISHED').length === 0 && <div className="card py-8 text-center text-white/30 text-sm">Нет активных турниров</div>}
             </div>}
           </div>}
+
+          {/* ─── Bulk selection floating panel ─── */}
+          {selectedQ.size > 0 && qSubtab === 'library' && (
+            <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-dark-800 border border-brand-500/40 rounded-2xl shadow-2xl px-5 py-3 flex items-center gap-3 backdrop-blur-xl">
+              <span className="text-white font-semibold text-sm">Выбрано: {selectedQ.size}</span>
+              <select value={bulkTarget} onChange={e => setBulkTarget(e.target.value)} className="input-field text-sm h-10 min-w-[200px]">
+                <option value="">— в какой турнир? —</option>
+                {tournaments.filter(t => t.status !== 'FINISHED').map(t => (
+                  <option key={t.id} value={t.id}>{t.title} ({qc(t)}/{RQ})</option>
+                ))}
+              </select>
+              <button onClick={doBulkAdd} disabled={!bulkTarget || bulkBusy} className="btn-primary text-sm h-10">
+                {bulkBusy ? '...' : 'Добавить'}
+              </button>
+              <button onClick={() => setSelectedQ(new Set())} className="btn-ghost text-sm h-10">✕</button>
+            </div>
+          )}
 
           {/* ─── Image lightbox ─── */}
           {lightboxImages && <ImageLightbox images={lightboxImages} startIndex={lightboxStart} onClose={() => setLightboxImages(null)} />}

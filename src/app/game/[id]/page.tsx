@@ -7,6 +7,28 @@ import { api } from '@/lib/api';
 import { useSocket } from '@/hooks/useSocket';
 import { detectLocale, getTranslation } from '@/lib/i18n';
 
+function WaitingCountdown({ target }: { target: string }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const iv = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(iv);
+  }, []);
+  const diff = Math.max(0, new Date(target).getTime() - now);
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor((diff % 86400000) / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  if (diff === 0) {
+    return <div className="text-2xl font-mono text-green-400 font-bold">Уже началось!</div>;
+  }
+  return (
+    <div className="text-3xl font-mono font-bold text-brand-400">
+      {d > 0 && <span>{d}д </span>}
+      {String(h).padStart(2, '0')}:{String(m).padStart(2, '0')}:{String(s).padStart(2, '0')}
+    </div>
+  );
+}
+
 export default function GamePage() {
   const params = useParams();
   const tournamentId = params.id as string;
@@ -190,6 +212,7 @@ export default function GamePage() {
   if (!tournament) return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" /></div>;
 
   const isLive = tournament.status === 'LIVE';
+  const isWaiting = tournament.status === 'DRAFT' || tournament.status === 'SCHEDULED';
   const isFinished = tournament.status === 'FINISHED';
   const isJoined = !!participant;
   const isPlaying = participant && ['PLAYING','APPROVED'].includes(participant.matchStatus);
@@ -243,6 +266,37 @@ export default function GamePage() {
         )}
 
         {/* Waiting for first question */}
+        {isWaiting && isJoined && (
+          <div className="card-glow mb-6 text-center py-10 animate-slide-up">
+            <div className="text-5xl mb-3">⏳</div>
+            <div className="text-2xl font-black text-white mb-2">Зал ожидания</div>
+            <div className="text-white/60 text-sm mb-6 max-w-md mx-auto">
+              Уже можно подключаться — админ запустит турнир, когда все игроки будут готовы
+            </div>
+            <div className="text-white/30 text-xs uppercase tracking-wider mb-2">Запланированное начало</div>
+            {tournament.startAt && <WaitingCountdown target={tournament.startAt} />}
+            <div className="mt-8 pt-6 border-t border-white/[0.05]">
+              <div className="text-white/40 text-xs uppercase tracking-wider mb-3">Подключённые игроки</div>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {tournament.participants?.filter((p: any) => ['APPROVED','PLAYING'].includes(p.matchStatus)).map((p: any) => (
+                  <div key={p.id} className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white/80">
+                    {p.user?.profile?.nickname || '?'}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isWaiting && !isJoined && (
+          <div className="card mb-6 text-center py-10 animate-slide-up">
+            <div className="text-4xl mb-3">🚫</div>
+            <div className="text-xl font-bold text-white mb-2">Вы не зарегистрированы</div>
+            <div className="text-white/50 text-sm mb-4">Подайте заявку на главной странице</div>
+            <button onClick={() => router.push('/dashboard')} className="btn-secondary text-sm">На главную</button>
+          </div>
+        )}
+
         {isLive && isPlaying && !matchOver && !hasQuestion && (
           <div className="card-glow text-center py-12 mb-6 animate-fade-in">
             <div className="text-5xl mb-6 animate-float">🎯</div>
