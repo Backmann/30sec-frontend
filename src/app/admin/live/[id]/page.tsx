@@ -388,7 +388,14 @@ export default function AdminLivePage() {
             )}
           </div>
           <div className="card">
-            <div className="section-title mb-4">Итоговые результаты</div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="section-title">Итоговые результаты</div>
+              <div className="text-[10px] uppercase tracking-wider text-white/40 font-mono">
+                <span className="text-white/60">игрок</span>
+                <span className="text-white/20 mx-1">:</span>
+                <span className="text-brand-400 font-semibold">30sec.</span>
+              </div>
+            </div>
             <div className="space-y-2">
               {participants.map((p: any, idx: number) => {
                 const isWinner = p.matchStatus === 'WON';
@@ -505,11 +512,25 @@ export default function AdminLivePage() {
           )}
 
           {/* ANSWERS */}
-          {currentAnswers.length > 0 && (
+          {currentAnswers.length > 0 && (() => {
+            const activePlayers = participants.filter((p: any) => p.matchStatus === 'PLAYING' || p.matchStatus === 'APPROVED');
+            const answered = currentAnswers.map((a: any) => a.nickname);
+            const notAnswered = activePlayers.filter((p: any) => !answered.includes(p.nickname));
+            return (
             <div>
-              <div className="section-title mb-3 flex items-center justify-between">
-                <span>Ответы игроков · {currentAnswers.length}</span>
-                {hasUnjudged && <span className="text-amber-400 text-xs">⚠️ Нужно оценить</span>}
+              <div className="section-title mb-3 flex items-center justify-between flex-wrap gap-2">
+                <span>Ответы · {currentAnswers.length}/{activePlayers.length}</span>
+                <div className="flex items-center gap-3">
+                  {notAnswered.length > 0 && phase === 'answering' && (
+                    <span className="text-xs text-amber-400">
+                      ⏳ Ждём: {notAnswered.map((p: any) => p.nickname).join(', ')}
+                    </span>
+                  )}
+                  {notAnswered.length === 0 && phase === 'answering' && (
+                    <span className="text-xs text-green-400">✓ Все ответили</span>
+                  )}
+                  {hasUnjudged && <span className="text-amber-400 text-xs">⚠️ Оцените</span>}
+                </div>
               </div>
               <div className="space-y-2">
                 {currentAnswers.map((a: any) => {
@@ -531,8 +552,16 @@ export default function AdminLivePage() {
                         <div className="text-white text-base mt-0.5 truncate">{a.answerText || <em className="text-white/30">пусто</em>}</div>
                       </div>
                       {a.judged ? (
-                        <div className={`px-3 py-2 rounded-xl text-sm font-bold shrink-0 ${a.decision === 'ACCEPTED' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                          {a.decision === 'ACCEPTED' ? '✓' : '✗'}
+                        <div className="flex items-center gap-1 shrink-0">
+                          <div className={`px-3 py-2 rounded-xl text-sm font-bold ${a.decision === 'ACCEPTED' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                            {a.decision === 'ACCEPTED' ? '✓' : '✗'}
+                          </div>
+                          <button
+                            onClick={() => doJudge(a.id, a.decision === 'ACCEPTED' ? 'REJECTED' : 'ACCEPTED')}
+                            disabled={busy === 'judge-' + a.id}
+                            className="px-2 py-2 text-xs rounded-xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/80 transition"
+                            title="Изменить решение"
+                          >↶</button>
                         </div>
                       ) : (
                         <div className="flex gap-2 shrink-0">
@@ -547,12 +576,19 @@ export default function AdminLivePage() {
                 })}
               </div>
             </div>
-          )}
+          ); })()}
         </div>
 
         {/* ─── RIGHT COLUMN: Scoreboard ─── */}
         <div>
-          <div className="section-title mb-3">Счёт · {participants.length}</div>
+          <div className="flex items-center justify-between mb-3">
+            <div className="section-title">Счёт · {participants.length}</div>
+            <div className="text-[10px] uppercase tracking-wider text-white/40 font-mono">
+              <span className="text-white/60">игрок</span>
+              <span className="text-white/20 mx-1">:</span>
+              <span className="text-brand-400 font-semibold">30sec.</span>
+            </div>
+          </div>
           <div className="space-y-2">
             {participants.map((p: any, idx: number) => {
               const nearWin = p.scoreUser >= 11;

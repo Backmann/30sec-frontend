@@ -216,6 +216,11 @@ export default function PublicLivePage() {
           </div>
 
           {/* Scoreboard */}
+          <div className="text-center text-xs uppercase tracking-[0.3em] text-white/30 font-mono mb-2">
+            <span>игрок</span>
+            <span className="mx-2">vs</span>
+            <span className="text-brand-400 font-semibold">30sec.</span>
+          </div>
           <div className="flex gap-3 justify-center flex-wrap">
             {participants.map((p: any) => {
               const nearWin = p.scoreUser >= 11;

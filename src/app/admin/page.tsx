@@ -557,13 +557,29 @@ export default function AdminPage() {
                       <div key={q.id}>
                       <div className="card py-3 px-4">
                         <div className="flex items-start gap-3">
-                          {q.questionImages && q.questionImages.length > 0 && (
-                            <div className="flex gap-1 shrink-0">
-                              {q.questionImages.slice(0, 3).map((img: any, i: number) => (
-                                <img key={img.id || i} src={img.url} alt="" onClick={() => { setLightboxImages(q.questionImages); setLightboxStart(i); }} className="w-10 h-10 rounded-lg object-cover border border-white/10 cursor-pointer hover:border-brand-400/60 transition" />
-                              ))}
-                              {q.questionImages.length > 3 && (
-                                <div onClick={() => { setLightboxImages(q.questionImages); setLightboxStart(3); }} className="w-10 h-10 rounded-lg border border-white/10 bg-white/5 flex items-center justify-center text-white/40 text-[10px] cursor-pointer hover:bg-white/10 transition">+{q.questionImages.length - 3}</div>
+                          {(q.questionImages?.length > 0 || q.answerImages?.length > 0) && (
+                            <div className="flex flex-col gap-1 shrink-0">
+                              {q.questionImages?.length > 0 && (
+                                <div className="flex gap-1 items-center" title="Изображения вопроса">
+                                  <span className="text-[9px] text-white/30 w-4">🖼</span>
+                                  {q.questionImages.slice(0, 3).map((img: any, i: number) => (
+                                    <img key={img.id || i} src={img.url} alt="" onClick={() => { setLightboxImages(q.questionImages); setLightboxStart(i); }} className="w-8 h-8 rounded-md object-cover border border-white/10 cursor-pointer hover:border-brand-400/60 transition" />
+                                  ))}
+                                  {q.questionImages.length > 3 && (
+                                    <div onClick={() => { setLightboxImages(q.questionImages); setLightboxStart(3); }} className="w-8 h-8 rounded-md border border-white/10 bg-white/5 flex items-center justify-center text-white/40 text-[9px] cursor-pointer">+{q.questionImages.length - 3}</div>
+                                  )}
+                                </div>
+                              )}
+                              {q.answerImages?.length > 0 && (
+                                <div className="flex gap-1 items-center" title="Изображения ответа">
+                                  <span className="text-[9px] text-green-400/60 w-4">🎯</span>
+                                  {q.answerImages.slice(0, 3).map((img: any, i: number) => (
+                                    <img key={img.id || i} src={img.url} alt="" onClick={() => { setLightboxImages(q.answerImages); setLightboxStart(i); }} className="w-8 h-8 rounded-md object-cover border border-green-500/20 cursor-pointer hover:border-green-400/60 transition" />
+                                  ))}
+                                  {q.answerImages.length > 3 && (
+                                    <div onClick={() => { setLightboxImages(q.answerImages); setLightboxStart(3); }} className="w-8 h-8 rounded-md border border-green-500/20 bg-green-500/5 flex items-center justify-center text-green-400/40 text-[9px] cursor-pointer">+{q.answerImages.length - 3}</div>
+                                  )}
+                                </div>
                               )}
                             </div>
                           )}

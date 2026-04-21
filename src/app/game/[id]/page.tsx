@@ -21,6 +21,7 @@ export default function GamePage() {
   const [answer, setAnswer] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [myJudgement, setMyJudgement] = useState<any>(null);
+  const [answerImagesForReveal, setAnswerImagesForReveal] = useState<any[]>([]);
   const [showTimer, setShowTimer] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [stateLoaded, setStateLoaded] = useState(false);
@@ -55,8 +56,21 @@ export default function GamePage() {
         currentScoreSystem: ws.lastJudgement.scoreSystem,
         matchStatus: ws.lastJudgement.matchStatus,
       } : prev);
+      // Fetch full game state to get answer images (they are revealed after judgement)
+      api.getGameState(tournamentId).then((gs: any) => {
+        if (gs?.currentQuestion?.answerImages) {
+          // Inject into ws.question via a setter trick — but ws is readonly
+          // Workaround: we store answerImages separately
+          setAnswerImagesForReveal(gs.currentQuestion.answerImages);
+        }
+      }).catch(() => {});
     }
-  }, [ws.lastJudgement, user]);
+  }, [ws.lastJudgement, user, tournamentId]);
+
+  // Reset answer images on new question
+  useEffect(() => {
+    setAnswerImagesForReveal([]);
+  }, [ws.question?.questionId]);
 
   // New question from WS: reset only if it's truly a NEW question (not restored)
   useEffect(() => {
@@ -103,6 +117,7 @@ export default function GamePage() {
       // Mark current question as restored so WS won't reset it
       if (gs.currentQuestion?.questionId) {
         setRestoredQId(gs.currentQuestion.questionId);
+        setAnswerImagesForReveal(gs.currentQuestion.answerImages || []);
       }
 
       // Restore participant
@@ -179,6 +194,11 @@ export default function GamePage() {
   const isJoined = !!participant;
   const isPlaying = participant && ['PLAYING','APPROVED'].includes(participant.matchStatus);
   const matchOver = participant && ['WON','LOST','FINISHED'].includes(participant.matchStatus);
+  const myScore = tournament?.participants?.find((p: any) => p.userId === user?.id);
+  const myWsScore = myScore ? ws.scores.get(myScore.userId) : null;
+  const mySu = myWsScore?.scoreUser ?? myScore?.currentScoreUser ?? 0;
+  const mySs = myWsScore?.scoreSystem ?? myScore?.currentScoreSystem ?? 0;
+  const isDecisive = mySu === 11 && mySs === 11;
   const questionData = getQuestionText();
   const hasQuestion = !!questionData;
   const timerSeconds = ws.timerSeconds;
@@ -244,6 +264,14 @@ export default function GamePage() {
           <div className="card text-center mb-6"><p className="text-white/60 mb-4">{t.tournament.live}</p><button onClick={handleJoin} className="btn-primary px-10">{t.tournament.join}</button></div>
         )}
 
+        {/* Decisive question banner — only when player is tied at 11:11 */}
+        {isLive && isPlaying && !matchOver && hasQuestion && !myJudgement && isDecisive && (
+          <div className="card mb-4 bg-gradient-to-r from-red-500/20 via-amber-500/20 to-red-500/20 border-red-500/40 text-center py-3 animate-pulse">
+            <div className="text-xl sm:text-2xl font-black text-red-400">⚡ РЕШАЮЩИЙ ВОПРОС</div>
+            <div className="text-xs text-white/60 mt-1">Всё решится сейчас</div>
+          </div>
+        )}
+
         {/* Question: input + button visible immediately */}
         {isLive && isPlaying && !matchOver && hasQuestion && !myJudgement && (
           <div className="card-glow mb-6 animate-slide-up">
@@ -298,6 +326,16 @@ export default function GamePage() {
             <div className="mt-4 space-y-2">
               <div className="text-white/40 text-sm">Your answer: <span className="text-white font-semibold">{answer.trim() || '(no answer)'}</span></div>
               {myJudgement.correctAnswer && <div className="text-white/40 text-sm">Correct answer: <span className="text-green-400 font-semibold">{myJudgement.correctAnswer}</span></div>}
+              {answerImagesForReveal.length > 0 && (
+                <div className={`grid gap-2 mt-4 ${answerImagesForReveal.length === 1 ? 'grid-cols-1' : answerImagesForReveal.length <= 4 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                  {answerImagesForReveal.map((img: any, i: number) => (
+                    <div key={img.id || i} className="space-y-1">
+                      <img src={img.url} alt="" className="w-full aspect-video object-cover rounded-xl border border-green-500/30" />
+                      {img.caption && <div className="text-white/60 text-xs">{img.caption}</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="mt-6 text-white/20 text-xs">
               <div className="flex justify-center mt-3"><div className="w-5 h-5 border-2 border-white/20 border-t-transparent rounded-full animate-spin" /></div>
@@ -309,7 +347,14 @@ export default function GamePage() {
         {/* Leaderboard */}
         {tournament.participants && tournament.participants.length > 0 && (
           <div className="card">
-            <h3 className="text-sm font-semibold text-white/50 mb-3">{t.nav.leaderboard}</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-white/50">{t.nav.leaderboard}</h3>
+              <div className="text-[10px] uppercase tracking-wider text-white/30 font-mono">
+                <span className="text-white/50">игрок</span>
+                <span className="text-white/20 mx-1">:</span>
+                <span className="text-brand-400 font-semibold">30sec.</span>
+              </div>
+            </div>
             <div className="space-y-1">
               {tournament.participants.filter((p: any) => ['PLAYING','WON','LOST','FINISHED','APPROVED'].includes(p.matchStatus)).sort((a: any, b: any) => b.currentScoreUser - a.currentScoreUser).map((p: any, idx: number) => {
                 const wsS = ws.scores.get(p.userId);
