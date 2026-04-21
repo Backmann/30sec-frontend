@@ -242,19 +242,69 @@ class ApiClient {
     });
   }
 
-  // Full upload cycle: get presigned → PUT file to R2 → return the public URL + r2 key
+  // Resize image to max 1200px (long side) and compress to JPEG ~85% quality
+  private async resizeImage(file: File, maxSize = 1200, quality = 0.85): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxSize || height > maxSize) {
+            if (width > height) {
+              height = Math.round((height * maxSize) / width);
+              width = maxSize;
+            } else {
+              width = Math.round((width * maxSize) / height);
+              height = maxSize;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return reject(new Error('Canvas not supported'));
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob(
+            (blob) => (blob ? resolve(blob) : reject(new Error('Blob failed'))),
+            'image/jpeg',
+            quality,
+          );
+        };
+        img.onerror = () => reject(new Error('Image load failed'));
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => reject(new Error('Read failed'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Full upload cycle: resize → get presigned → PUT to R2 → return the public URL + r2 key
   async uploadImage(file: File, category: 'question' | 'answer') {
     if (!file.type.startsWith('image/')) throw new Error('Только изображения');
     if (file.size > 5 * 1024 * 1024) throw new Error('Максимум 5 MB');
+
+    // Resize in browser (to reduce upload time and R2 storage)
+    let blob: Blob;
+    let contentType: string;
+    try {
+      blob = await this.resizeImage(file);
+      contentType = 'image/jpeg';
+    } catch (e) {
+      // Fallback to original if resize fails
+      blob = file;
+      contentType = file.type;
+    }
+
     const { uploadUrl, publicUrl, key } = await this.getPresignedUploadUrl({
       category,
-      contentType: file.type,
-      contentLength: file.size,
+      contentType,
+      contentLength: blob.size,
     });
     const putRes = await fetch(uploadUrl, {
       method: 'PUT',
-      headers: { 'Content-Type': file.type },
-      body: file,
+      headers: { 'Content-Type': contentType },
+      body: blob,
     });
     if (!putRes.ok) throw new Error(`Ошибка загрузки: ${putRes.status}`);
     return { url: publicUrl, r2Key: key };
