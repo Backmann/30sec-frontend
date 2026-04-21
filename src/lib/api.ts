@@ -246,6 +246,18 @@ class ApiClient {
       method: 'POST', body: JSON.stringify({ tournamentId, count }),
     });
   }
+  // ─── Votes (best-question voting after match) ──
+  async getVoteResults(tournamentId: string) {
+    return this.request<any>(`/votes/results/${tournamentId}`);
+  }
+  async getMyVote(tournamentId: string) {
+    return this.request<any>(`/votes/my-vote/${tournamentId}`);
+  }
+  async castVote(tournamentId: string, questionId: string) {
+    return this.request<any>('/votes', {
+      method: 'POST', body: JSON.stringify({ tournamentId, questionId }),
+    });
+  }
 
   // ─── Image uploads (R2) ─────────────────────────
   async getPresignedUploadUrl(opts: { category: 'question' | 'answer'; contentType: string; contentLength?: number }) {
