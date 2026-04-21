@@ -704,18 +704,30 @@ export default function AdminPage() {
 
           {/* ─── Bulk selection floating panel ─── */}
           {selectedQ.size > 0 && qSubtab === 'library' && (
-            <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-dark-800 border border-brand-500/40 rounded-2xl shadow-2xl px-5 py-3 flex items-center gap-3 backdrop-blur-xl">
-              <span className="text-white font-semibold text-sm">Выбрано: {selectedQ.size}</span>
-              <select value={bulkTarget} onChange={e => setBulkTarget(e.target.value)} className="input-field text-sm h-10 min-w-[200px]">
-                <option value="">— в какой турнир? —</option>
-                {tournaments.filter(t => t.status !== 'FINISHED').map(t => (
-                  <option key={t.id} value={t.id}>{t.title} ({qc(t)}/{RQ})</option>
-                ))}
-              </select>
-              <button onClick={doBulkAdd} disabled={!bulkTarget || bulkBusy} className="btn-primary text-sm h-10">
-                {bulkBusy ? '...' : 'Добавить'}
-              </button>
-              <button onClick={() => setSelectedQ(new Set())} className="btn-ghost text-sm h-10">✕</button>
+            <div className="fixed bottom-0 left-0 right-0 sm:bottom-6 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-40 bg-dark-800/95 backdrop-blur-xl border-t sm:border border-brand-500/40 sm:rounded-2xl shadow-2xl">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 sm:px-5 sm:py-3 sm:w-[560px]">
+                <div className="flex items-center justify-between sm:justify-start gap-3 sm:shrink-0">
+                  <span className="text-white font-semibold text-sm whitespace-nowrap">Выбрано: <span className="text-brand-400">{selectedQ.size}</span></span>
+                  <button onClick={() => setSelectedQ(new Set())} className="sm:hidden w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 flex items-center justify-center" title="Снять выбор">✕</button>
+                </div>
+                <select
+                  value={bulkTarget}
+                  onChange={e => setBulkTarget(e.target.value)}
+                  style={{ colorScheme: 'dark' }}
+                  className="flex-1 min-w-0 px-3 h-11 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-brand-500/60"
+                >
+                  <option value="">— в какой турнир? —</option>
+                  {tournaments.filter(t => t.status !== 'FINISHED').map(t => (
+                    <option key={t.id} value={t.id}>{t.title} ({qc(t)}/{RQ})</option>
+                  ))}
+                </select>
+                <div className="flex gap-2 sm:shrink-0">
+                  <button onClick={doBulkAdd} disabled={!bulkTarget || bulkBusy} className="btn-primary text-sm h-11 px-5 flex-1 sm:flex-none whitespace-nowrap">
+                    {bulkBusy ? '...' : 'Добавить'}
+                  </button>
+                  <button onClick={() => setSelectedQ(new Set())} className="hidden sm:flex w-11 h-11 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 items-center justify-center text-sm" title="Снять выбор">✕</button>
+                </div>
+              </div>
             </div>
           )}
 
