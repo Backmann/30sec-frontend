@@ -24,11 +24,9 @@ jobs:
             git pull origin main
             cd /root/30sec
 
-            echo "-> Clean up any stale frontend containers..."
-            docker ps -a --filter "name=30sec-frontend" --format "{{.Names}}" | xargs -r docker rm -f || true
 
             echo "-> Rebuilding and starting frontend container..."
-            docker compose up -d --build frontend
+            docker compose up -d --build --force-recreate --no-deps frontend
 
             echo "-> Waiting for health check (up to 90s)..."
             for i in 1 2 3 4 5 6 7 8 9; do
