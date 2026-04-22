@@ -236,6 +236,9 @@ class ApiClient {
   async extendReading(tournamentId: string) {
     return this.request<any>(`/tournaments/${tournamentId}/extend-reading`, { method: 'POST' });
   }
+  async getAdminSummary(tournamentId: string) {
+    return this.request<any>(`/tournaments/${tournamentId}/admin-summary`);
+  }
   async bulkAddToTournament(tournamentId: string, questionIds: string[]) {
     return this.request<any>('/questions/bulk-add-to-tournament', {
       method: 'POST', body: JSON.stringify({ tournamentId, questionIds }),

@@ -108,6 +108,14 @@ export default function AdminLivePage() {
 
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [shareToast, setShareToast] = useState<string | null>(null);
+  const [postSummary, setPostSummary] = useState<any>(null);
+
+  const loadPostSummary = async () => {
+    try {
+      const data = await api.getAdminSummary(tournamentId);
+      setPostSummary(data);
+    } catch (e) { console.error(e); }
+  };
 
   const copyUrl = async (path: string, label: string) => {
     const url = `${window.location.origin}${path}`;
@@ -231,6 +239,16 @@ export default function AdminLivePage() {
     catch (e: any) { alert(e.message || 'Ошибка'); }
     finally { setBusy(null); }
   };
+
+  // Load post-match summary for FINISHED tournaments (must be before early returns)
+  useEffect(() => {
+    const isFinishedNow = state?.tournament?.status === 'FINISHED';
+    if (isFinishedNow) {
+      loadPostSummary();
+      const iv = setInterval(() => loadPostSummary(), 30000);
+      return () => clearInterval(iv);
+    }
+  }, [state?.tournament?.status, tournamentId]);
 
   if (fetchError) {
     return (
@@ -382,25 +400,97 @@ export default function AdminLivePage() {
         </div>
       )}
 
-      {/* ═══ RECAP SCREEN (after finish) ═══ */}
-      {isFinished && (
-        <div className="max-w-3xl mx-auto">
-          <div className="card text-center py-16 mb-6 bg-gradient-to-b from-accent-500/10 to-transparent border-accent-500/30">
-            <div className="text-6xl mb-4">🏆</div>
-            <div className="text-white/40 text-sm uppercase tracking-wider mb-2">Турнир завершён</div>
-            {winner ? (
+      {/* ═══ POST-MATCH ADMIN DASHBOARD ═══ */}
+      {isFinished && postSummary && (
+        <div className="max-w-5xl mx-auto space-y-6">
+          {/* Winner hero */}
+          <div className="card text-center py-12 bg-gradient-to-b from-accent-500/10 to-transparent border-accent-500/30">
+            <div className="text-5xl mb-3">🏆</div>
+            <div className="text-white/40 text-xs uppercase tracking-[0.2em] mb-2">Турнир завершён{postSummary.wasDecisive && ' · в решающем вопросе'}</div>
+            {postSummary.winner ? (
               <>
-                <div className="text-4xl font-black text-accent-400 mb-2">{winner.nickname}</div>
-                <div className="text-xl text-white/60">
-                  Победитель со счётом <span className="text-white font-bold">{winner.scoreUser}</span>
-                  <span className="text-white/40 mx-1">:</span>
-                  <span className="text-white/60">{winner.scoreSystem}</span>
+                <div className="text-3xl sm:text-4xl font-black text-accent-400 mb-1">{postSummary.winner.nickname} {postSummary.winner.flagCode && <span className="text-xl text-white/40">{postSummary.winner.flagCode.toUpperCase()}</span>}</div>
+                <div className="text-lg text-white/60 font-mono">
+                  <span className="text-white font-bold">{postSummary.winner.scoreUser}</span>
+                  <span className="text-white/30 mx-1">:</span>
+                  <span className="text-white/50">{postSummary.winner.scoreSystem}</span>
                 </div>
               </>
             ) : (
-              <div className="text-xl text-white/60">Итоги ниже</div>
+              <div className="text-xl text-white/60">Без победителя</div>
             )}
           </div>
+
+          {/* Key stats */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="card py-4 text-center">
+              <div className="text-2xl font-black text-white">{postSummary.stats.questionsPlayed}<span className="text-white/30 text-base">/{postSummary.stats.questionsTotal}</span></div>
+              <div className="text-[10px] uppercase text-white/40 mt-1">Вопросов</div>
+            </div>
+            <div className="card py-4 text-center">
+              <div className="text-2xl font-black text-white">{postSummary.stats.participantsCount}</div>
+              <div className="text-[10px] uppercase text-white/40 mt-1">Игроков</div>
+            </div>
+            <div className="card py-4 text-center">
+              <div className="text-2xl font-black text-white">{postSummary.stats.accuracyPercent}<span className="text-white/30 text-base">%</span></div>
+              <div className="text-[10px] uppercase text-white/40 mt-1">Точность</div>
+            </div>
+            <div className="card py-4 text-center">
+              <div className="text-2xl font-black text-white">{postSummary.durationMinutes != null ? postSummary.durationMinutes : '—'}<span className="text-white/30 text-base"> мин</span></div>
+              <div className="text-[10px] uppercase text-white/40 mt-1">Длительность</div>
+            </div>
+          </div>
+
+          {/* Voting panel */}
+          <div className="card">
+            <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">⭐</span>
+                <div className="section-title">Лучший вопрос турнира</div>
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                {postSummary.voting.open ? (
+                  <span className="px-2.5 py-1 rounded-full bg-green-500/10 text-green-400 border border-green-500/20">
+                    Открыто · ещё {postSummary.voting.hoursLeft}ч
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-1 rounded-full bg-white/5 text-white/40 border border-white/10">
+                    Голосование закрыто
+                  </span>
+                )}
+                <span className="text-white/40">Всего голосов: <span className="text-white font-bold">{postSummary.voting.totalVotes}</span></span>
+              </div>
+            </div>
+            {postSummary.voting.leader ? (
+              <div className="flex items-start gap-3">
+                <div className="shrink-0 w-12 h-12 rounded-xl bg-accent-500/20 flex items-center justify-center text-2xl">🥇</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-white font-medium leading-tight mb-1">{postSummary.voting.leader.localizations?.[0]?.questionText}</div>
+                  {postSummary.voting.leader.creator && (
+                    <div className="text-white/40 text-xs">Автор: <span className="text-white/70">{postSummary.voting.leader.creator.nickname}</span></div>
+                  )}
+                </div>
+                <div className="shrink-0 text-right">
+                  <div className="text-2xl font-black text-accent-400">{postSummary.voting.leader.votes}</div>
+                  <div className="text-[10px] uppercase text-white/40">голос(ов)</div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-white/40 text-sm text-center py-4">
+                {postSummary.voting.open ? 'Пока нет голосов — пригласите зрителей проголосовать' : 'Голосов не было'}
+              </div>
+            )}
+            <div className="flex gap-2 mt-4 pt-4 border-t border-white/[0.05]">
+              <button onClick={() => copyUrl(`/vote/${tournamentId}`, 'Ссылка на голосование')} className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-accent-500/10 hover:bg-accent-500/20 text-accent-400 text-sm font-semibold transition">
+                🔗 Поделиться голосованием
+              </button>
+              <button onClick={() => router.push(`/vote/${tournamentId}`)} className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 text-sm font-semibold transition">
+                Открыть страницу
+              </button>
+            </div>
+          </div>
+
+          {/* Participants ranking */}
           <div className="card">
             <div className="flex items-center justify-between mb-4">
               <div className="section-title">Итоговые результаты</div>
@@ -411,17 +501,19 @@ export default function AdminLivePage() {
               </div>
             </div>
             <div className="space-y-2">
-              {participants.map((p: any, idx: number) => {
+              {postSummary.participants.map((p: any, idx: number) => {
                 const isWinner = p.matchStatus === 'WON';
                 return (
-                  <div key={p.id} className={`card py-3 flex items-center gap-3 ${isWinner ? 'border-accent-500/50 bg-accent-500/10' : ''}`}>
+                  <div key={p.id} className={`card py-3 flex items-center gap-3 ${isWinner ? 'border-accent-500/50 bg-accent-500/5' : ''}`}>
                     <span className={`text-2xl font-bold font-mono w-8 shrink-0 ${idx === 0 ? 'text-accent-400' : 'text-white/30'}`}>
                       {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}
                     </span>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="text-white font-semibold">{p.nickname} {p.flagCode && <span className="text-xs text-white/40">{p.flagCode.toUpperCase()}</span>}</div>
-                      <div className="text-[10px] uppercase font-bold text-white/40">
+                      <div className="text-[10px] text-white/40 mt-0.5">
                         {p.matchStatus === 'WON' ? '🏆 ПОБЕДА' : p.matchStatus === 'LOST' ? 'Поражение' : 'Завершён'}
+                        <span className="text-white/20 mx-2">·</span>
+                        <span>Ответов: {p.answersCorrect}/{p.answersGiven} ({p.accuracyPercent}%)</span>
                       </div>
                     </div>
                     <div className="font-mono text-lg shrink-0">
@@ -434,6 +526,56 @@ export default function AdminLivePage() {
               })}
             </div>
           </div>
+
+          {/* Played questions timeline */}
+          <div className="card">
+            <div className="section-title mb-4">Сыгранные вопросы · {postSummary.questions.length}</div>
+            <div className="space-y-3">
+              {postSummary.questions.map((q: any) => {
+                const loc = q.localizations?.find((l: any) => l.language === 'ru') || q.localizations?.[0];
+                return (
+                  <div key={q.questionId} className="card py-3 px-4">
+                    <div className="flex items-start gap-3">
+                      <div className="shrink-0 w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/30 text-sm font-mono">#{q.orderIndex + 1}</div>
+                      {q.questionImages?.length > 0 && (
+                        <img src={q.questionImages[0].url} alt="" className="w-16 h-16 rounded-lg object-cover border border-white/10 shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-white text-sm font-medium leading-snug">{loc?.questionText}</div>
+                        {loc?.correctAnswer && <div className="text-green-400/70 text-xs mt-0.5">→ {loc.correctAnswer}</div>}
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-[11px]">
+                          {q.accepted.length > 0 && (
+                            <span className="text-green-400">✓ {q.accepted.map((a: any) => a.nickname).join(', ')}</span>
+                          )}
+                          {q.rejected.length > 0 && (
+                            <span className="text-red-400/80">✗ {q.rejected.map((a: any) => a.nickname).join(', ')}</span>
+                          )}
+                          {q.noAnswer.length > 0 && (
+                            <span className="text-white/30">⏱ не ответили: {q.noAnswer.map((a: any) => a.nickname).join(', ')}</span>
+                          )}
+                        </div>
+                      </div>
+                      {q.votes > 0 && (
+                        <div className="shrink-0 text-right">
+                          <div className="px-2.5 py-1 rounded-lg bg-accent-500/10 text-accent-400 text-xs font-semibold">
+                            ⭐ {q.votes}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading state for post-match */}
+      {isFinished && !postSummary && (
+        <div className="max-w-3xl mx-auto text-center py-20">
+          <div className="w-10 h-10 border-2 border-white/20 border-t-brand-500 rounded-full animate-spin mx-auto" />
+          <div className="text-white/40 text-sm mt-4">Загрузка статистики...</div>
         </div>
       )}
 
