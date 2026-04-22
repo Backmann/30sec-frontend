@@ -461,23 +461,41 @@ export default function AdminLivePage() {
                 <span className="text-white/40">Всего голосов: <span className="text-white font-bold">{postSummary.voting.totalVotes}</span></span>
               </div>
             </div>
-            {postSummary.voting.leader ? (
-              <div className="flex items-start gap-3">
-                <div className="shrink-0 w-12 h-12 rounded-xl bg-accent-500/20 flex items-center justify-center text-2xl">🥇</div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-white font-medium leading-tight mb-1">{postSummary.voting.leader.localizations?.[0]?.questionText}</div>
-                  {postSummary.voting.leader.creator && (
-                    <div className="text-white/40 text-xs">Автор: <span className="text-white/70">{postSummary.voting.leader.creator.nickname}</span></div>
-                  )}
+            {postSummary.voting.winners && postSummary.voting.winners.length > 0 ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="text-[10px] uppercase tracking-wider text-accent-400/80">
+                    {postSummary.voting.winners.length === 1
+                      ? (postSummary.voting.open ? 'Текущий лидер' : '🏆 Победитель голосования')
+                      : (postSummary.voting.open ? `Текущие лидеры (${postSummary.voting.winners.length})` : `🏆 Со-победители (${postSummary.voting.winners.length})`)}
+                  </div>
+                  <div className="text-xs text-white/40">{postSummary.voting.topVotes} {postSummary.voting.topVotes === 1 ? 'голос' : 'голос(ов)'} у каждого</div>
                 </div>
-                <div className="shrink-0 text-right">
-                  <div className="text-2xl font-black text-accent-400">{postSummary.voting.leader.votes}</div>
-                  <div className="text-[10px] uppercase text-white/40">голос(ов)</div>
-                </div>
+                {postSummary.voting.winners.map((w: any) => {
+                  const loc = w.localizations?.find((l: any) => l.language === 'ru') || w.localizations?.[0];
+                  return (
+                    <div key={w.questionId} className="flex items-start gap-3 p-3 rounded-xl bg-accent-500/5 border border-accent-500/20">
+                      <div className="shrink-0 w-10 h-10 rounded-xl bg-accent-500/20 flex items-center justify-center text-xl">🏆</div>
+                      {w.questionImages?.length > 0 && (
+                        <img src={w.questionImages[0].url} alt="" className="w-16 h-16 rounded-lg object-cover border border-white/10 shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-white font-medium leading-tight mb-1">{loc?.questionText}</div>
+                        {loc?.correctAnswer && <div className="text-green-400/70 text-xs mb-1">→ {loc.correctAnswer}</div>}
+                        {w.creator && (
+                          <div className="text-white/40 text-xs">Автор: <span className="text-white/70">{w.creator.nickname}</span>{w.creator.flagCode && <span className="ml-1">{w.creator.flagCode.toUpperCase()}</span>}</div>
+                        )}
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="text-xl font-black text-accent-400">{w.votes}</div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="text-white/40 text-sm text-center py-4">
-                {postSummary.voting.open ? 'Пока нет голосов — пригласите зрителей проголосовать' : 'Голосов не было'}
+                {postSummary.voting.open ? '📢 Пока нет голосов — пригласите зрителей проголосовать' : 'Голосов не было'}
               </div>
             )}
             <div className="flex gap-2 mt-4 pt-4 border-t border-white/[0.05]">
