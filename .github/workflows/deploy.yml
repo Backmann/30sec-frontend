@@ -34,7 +34,8 @@ jobs:
               STATUS=$(docker inspect --format="{{.State.Health.Status}}" 30sec-frontend 2>/dev/null || echo "missing")
               echo "   [attempt $i/9] status: $STATUS"
               if [ "$STATUS" = "healthy" ]; then
-                echo "OK: Frontend is healthy!"
+                echo "OK: Frontend is healthy! Reloading nginx..."
+                docker restart 30sec-nginx && sleep 3
                 exit 0
               fi
             done
