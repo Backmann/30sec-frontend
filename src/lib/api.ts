@@ -239,6 +239,15 @@ class ApiClient {
   async getAdminSummary(tournamentId: string) {
     return this.request<any>(`/tournaments/${tournamentId}/admin-summary`);
   }
+  async reorderTournamentQuestions(tournamentId: string, orderedTqIds: string[]) {
+    return this.request<any>('/questions/reorder-in-tournament', {
+      method: 'POST',
+      body: JSON.stringify({ tournamentId, orderedTqIds }),
+    });
+  }
+  async getFreeQuestionsCount() {
+    return this.request<{ count: number }>('/questions/free-count');
+  }
   async bulkAddToTournament(tournamentId: string, questionIds: string[]) {
     return this.request<any>('/questions/bulk-add-to-tournament', {
       method: 'POST', body: JSON.stringify({ tournamentId, questionIds }),

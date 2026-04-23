@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import ImageUploader, { UploadedImage } from '@/components/ImageUploader';
 import ImageLightbox from '@/components/ImageLightbox';
 import io from 'socket.io-client';
+import ReorderableQuestions from '@/components/ReorderableQuestions';
 
 type Tab = 'dashboard' | 'tournaments' | 'questions' | 'users' | 'logs';
 const RQ = 23;
@@ -58,6 +59,13 @@ export default function AdminPage() {
       setSelectedQ(new Set());
     }
   }, [tab, qSubtab]);
+
+  // Refresh free questions count when viewing byTournament
+  useEffect(() => {
+    if (tab === 'questions' && qSubtab === 'byTournament') {
+      refreshFreeCount();
+    }
+  }, [tab, qSubtab]);
   const [bulkTarget, setBulkTarget] = useState<string>('');
   const [bulkBusy, setBulkBusy] = useState(false);
 
@@ -86,11 +94,24 @@ export default function AdminPage() {
     if (!confirm('Заполнить случайными свободными вопросами до 23?')) return;
     try {
       const res = await api.autoFillTournament(tournamentId, 23);
-      alert(`Добавлено ${res.added} вопросов. Всего: ${res.total}`);
+      if (res.partial) {
+        alert(`Добавлено ${res.added} вопросов. Всего: ${res.total}/${res.target}.\n\nВ библиотеке закончились свободные вопросы. Чтобы добрать ещё ${res.stillNeeded}, создайте новые или освободите из других турниров.`);
+      } else {
+        alert(`✓ Турнир заполнен! Добавлено ${res.added} вопросов (всего ${res.total}/${res.target})`);
+      }
+      refreshFreeCount();
       refresh();
     } catch (e: any) {
       alert('Ошибка: ' + (e.message || ''));
     }
+  };
+
+  const [freeCount, setFreeCount] = useState<number | null>(null);
+  const refreshFreeCount = async () => {
+    try {
+      const res = await api.getFreeQuestionsCount();
+      setFreeCount(res.count);
+    } catch {}
   };
   const [qSearch, setQSearch] = useState('');
   const [qOnlyUnused, setQOnlyUnused] = useState(false);
@@ -703,7 +724,7 @@ export default function AdminPage() {
 
             {/* ─── BY TOURNAMENT SUBTAB ─── */}
             {qSubtab === 'byTournament' && <div>
-              {tournaments.filter(t=>t.status!=='FINISHED').map(t=>{const tqs=t.tournamentQuestions||[];return <div key={t.id} className="mb-6"><div className="flex items-center gap-2 mb-2 flex-wrap"><h3 className="text-sm font-semibold text-white/50">{t.title}</h3><span className={`text-[10px] font-mono ${tqs.length>=RQ?'text-green-400':'text-amber-400'}`}>{tqs.length}/{RQ}</span>{tqs.length<RQ&&<span className="text-[10px] text-red-400/60">нужно ещё {RQ-tqs.length}</span>}{tqs.length<RQ&&<button onClick={()=>doAutoFill(t.id)} className="text-[10px] px-2 py-0.5 rounded-md bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 font-semibold transition" title="Заполнить случайными свободными вопросами">⚡ Заполнить</button>}</div>{tqs.length===0?<div className="card py-4 text-white/20 text-sm text-center">Нет вопросов</div>:<div className="space-y-1">{tqs.map((tq:any,i:number)=>{const firstLoc = tq.question?.localizations?.[0]; return <div key={tq.id} className="card py-3 px-4"><div className="flex items-start gap-3"><span className="text-white/20 text-xs font-mono w-6 shrink-0">Q{i+1}</span><div className="flex-1">{tq.question?.localizations?.map((l:any)=><div key={l.id} className="text-white/60 text-sm"><span className="text-white/20 font-mono text-[10px] mr-1">{l.language}</span>{l.questionText}{l.correctAnswerLocalized&&<span className="text-green-400/40 ml-2"> {l.correctAnswerLocalized}</span>}</div>)}</div>{tq.isUsed?<span className="text-[10px] text-green-400 px-2">✓ сыгран</span>:<button onClick={()=>doRemoveFromTournament(tq.id, firstLoc?.questionText||'')} title="Убрать из турнира" className="w-7 h-7 rounded-lg bg-white/[0.03] hover:bg-red-500/20 text-white/40 hover:text-red-400 text-xs transition">➖</button>}</div></div>})}</div>}</div>})}
+              {tournaments.filter(t=>t.status!=='FINISHED').map(t=>{const tqs=t.tournamentQuestions||[];return <div key={t.id} className="mb-6"><div className="flex items-center gap-2 mb-2 flex-wrap"><h3 className="text-sm font-semibold text-white/50">{t.title}</h3><span className={`text-[10px] font-mono ${tqs.length>=RQ?'text-green-400':'text-amber-400'}`}>{tqs.length}/{RQ}</span>{tqs.length<RQ&&<span className="text-[10px] text-red-400/60">нужно ещё {RQ-tqs.length}</span>}{tqs.length>1&&<span className="text-[10px] text-white/30 ml-auto">⇅ перетащите чтобы изменить порядок</span>}{tqs.length<RQ&&(()=>{const need=RQ-tqs.length;const canAdd=freeCount!==null?Math.min(need,freeCount):need;const enough=freeCount===null||freeCount>=need;return <><button onClick={()=>doAutoFill(t.id)} disabled={freeCount===0} className={`text-[10px] px-2 py-0.5 rounded-md font-semibold transition ${freeCount===0?'bg-white/5 text-white/30 cursor-not-allowed':enough?'bg-brand-500/10 hover:bg-brand-500/20 text-brand-400':'bg-amber-500/10 hover:bg-amber-500/20 text-amber-400'}`} title={freeCount===0?'В библиотеке нет свободных вопросов':enough?'Заполнить случайными свободными':`Будет добавлено ${canAdd}/${need} — в библиотеке ${freeCount} свободных`}>⚡ {freeCount===0?'Нет свободных':enough?'Заполнить':`Заполнить ${canAdd}/${need}`}</button>{freeCount!==null&&<span className="text-[10px] text-white/30">в библиотеке: <span className={freeCount===0?'text-red-400':'text-white/50'}>{freeCount}</span></span>}</>;})()}</div><ReorderableQuestions tournamentId={t.id} tqs={tqs} onRemove={doRemoveFromTournament} onReorderSaved={() => { /* optional: refresh data */ }} /></div>})}
               {tournaments.filter(t=>t.status!=='FINISHED').length === 0 && <div className="card py-8 text-center text-white/30 text-sm">Нет активных турниров</div>}
             </div>}
           </div>}
