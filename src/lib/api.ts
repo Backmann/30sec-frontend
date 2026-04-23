@@ -248,6 +248,20 @@ class ApiClient {
   async getFreeQuestionsCount() {
     return this.request<{ count: number }>('/questions/free-count');
   }
+  async trackingPing() {
+    return this.request<{ tracked: boolean }>('/tracking/ping', { method: 'POST' });
+  }
+  async getPlayers(params: { search?: string; status?: string; sort?: string } = {}) {
+    const q = new URLSearchParams();
+    if (params.search) q.set('search', params.search);
+    if (params.status) q.set('status', params.status);
+    if (params.sort) q.set('sort', params.sort);
+    const qs = q.toString() ? '?' + q.toString() : '';
+    return this.request<any[]>('/admin/players' + qs);
+  }
+  async getPlayerDetails(id: string) {
+    return this.request<any>('/admin/players/' + id);
+  }
   async bulkAddToTournament(tournamentId: string, questionIds: string[]) {
     return this.request<any>('/questions/bulk-add-to-tournament', {
       method: 'POST', body: JSON.stringify({ tournamentId, questionIds }),

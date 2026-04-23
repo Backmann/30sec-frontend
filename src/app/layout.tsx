@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import TrackingPing from '@/components/TrackingPing';
 
 export const metadata: Metadata = {
   title: '30sec. — Intellectual Tournament',
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ru" className="dark">
       <body className="min-h-screen bg-dark-900 overflow-x-hidden">
+        <TrackingPing />
         <ErrorBoundary>{children}</ErrorBoundary>
       </body>
     </html>

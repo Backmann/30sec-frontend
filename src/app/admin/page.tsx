@@ -7,6 +7,7 @@ import ImageUploader, { UploadedImage } from '@/components/ImageUploader';
 import ImageLightbox from '@/components/ImageLightbox';
 import io from 'socket.io-client';
 import ReorderableQuestions from '@/components/ReorderableQuestions';
+import PlayersTab from '@/components/PlayersTab';
 
 type Tab = 'dashboard' | 'tournaments' | 'questions' | 'users' | 'logs';
 const RQ = 23;
@@ -790,7 +791,7 @@ export default function AdminPage() {
             );
           })()}
 
-          {tab==='users'&&users?.data&&<div className="animate-fade-in"><h2 className="text-xl font-bold text-white mb-5">Игроки</h2><div className="space-y-2">{users.data.map((u:any)=><div key={u.id} className="card flex items-center justify-between"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-xl bg-white/[0.04] flex items-center justify-center text-white/30 text-sm font-bold">{(u.nickname||u.email[0]).charAt(0).toUpperCase()}</div><div><span className="text-white font-medium text-sm">{u.nickname||u.email}</span><div className="flex gap-2 mt-0.5"><span className="badge-draft text-[10px]">{u.role}</span></div></div></div><div className="text-white/20 text-xs font-mono">{u.stats?.totalAnswered||0}</div></div>)}</div></div>}
+          {tab==='users' && <PlayersTab />}
           {tab==='logs'&&logs?.data&&<div className="animate-fade-in"><h2 className="text-xl font-bold text-white mb-5">Журнал</h2><div className="space-y-1">{logs.data.map((l:any)=><div key={l.id} className="card py-3 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-1"><div className="flex items-center gap-2"><span className="badge-draft text-[10px]">{l.actionType}</span><span className="text-white/40 text-xs">{l.entityType}</span></div><div className="text-white/20 text-[11px] font-mono">{l.adminNickname} | {new Date(l.createdAt).toLocaleString()}</div></div>)}</div></div>}
         </div>
       </div>
