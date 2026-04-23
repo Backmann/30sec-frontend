@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -26,10 +25,9 @@ export default function RegisterPage() {
   const [locale, setLocale] = useState(detectLocale());
   const t = getTranslation(locale);
   const [mounted, setMounted] = useState(false);
-
   const [form, setForm] = useState({
-    email: '', password: '', firstName: '', lastName: '', agreedToTerms: false,
-    nickname: '', countryCode: 'DE',
+    email: '', password: '', nickname: '', countryCode: 'DE',
+    acceptTerms: false, acceptPrivacy: false, marketingConsent: false,
   });
 
   useEffect(() => { setMounted(true); }, []);
@@ -41,6 +39,7 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.acceptTerms || !form.acceptPrivacy) return;
     try {
       await register({ ...form, language: locale });
       router.push('/dashboard');
@@ -49,12 +48,13 @@ export default function RegisterPage() {
 
   if (!mounted) return null;
 
+  const canSubmit = form.acceptTerms && form.acceptPrivacy && form.email && form.password.length >= 8 && form.nickname.length >= 3;
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-8 relative">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-brand-950/30 via-dark-900 to-dark-900" />
-
       <div className="relative z-10 w-full max-w-[420px]">
-        <div className="text-center mb-8 animate-fade-in">
+        <div className="text-center mb-6 animate-fade-in">
           <Link href="/" className="inline-block">
             <h1 className="text-5xl sm:text-6xl font-display font-black tracking-tighter">
               <span className="text-white">30</span>
@@ -63,6 +63,7 @@ export default function RegisterPage() {
             </h1>
           </Link>
           <p className="text-white/30 mt-3 text-sm font-medium">{t.auth.register}</p>
+          <p className="text-white/40 text-xs mt-2">Быстрая регистрация · профиль заполните позже</p>
         </div>
 
         <form onSubmit={handleSubmit}
@@ -75,25 +76,6 @@ export default function RegisterPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="input-label">{t.auth.firstName}</label>
-              <input type="text" value={form.firstName} onChange={(e) => update('firstName', e.target.value)}
-                className="input-field" required />
-            </div>
-            <div>
-              <label className="input-label">{t.auth.lastName}</label>
-              <input type="text" value={form.lastName} onChange={(e) => update('lastName', e.target.value)}
-                className="input-field" required />
-            </div>
-          </div>
-
-          <div>
-            <label className="input-label">{t.auth.nickname}</label>
-            <input type="text" value={form.nickname} onChange={(e) => update('nickname', e.target.value)}
-              className="input-field font-mono" placeholder={t.auth.nicknamePlaceholder} required />
-          </div>
-
           <div>
             <label className="input-label">{t.auth.email}</label>
             <input type="email" value={form.email} onChange={(e) => update('email', e.target.value)}
@@ -103,12 +85,20 @@ export default function RegisterPage() {
           <div>
             <label className="input-label">{t.auth.password}</label>
             <input type="password" value={form.password} onChange={(e) => update('password', e.target.value)}
-              className="input-field" placeholder="Min. 8 characters" required minLength={8} />
+              className="input-field" placeholder="Минимум 8 символов" required minLength={8} />
           </div>
 
           <div>
-            <label className="input-label">Country</label>
+            <label className="input-label">{t.auth.nickname}</label>
+            <input type="text" value={form.nickname} onChange={(e) => update('nickname', e.target.value)}
+              className="input-field font-mono" placeholder={t.auth.nicknamePlaceholder} required minLength={3} />
+            <div className="text-[10px] text-white/30 mt-1 px-1">Как вас увидят в турнирах</div>
+          </div>
+
+          <div>
+            <label className="input-label">Страна</label>
             <select value={form.countryCode} onChange={(e) => update('countryCode', e.target.value)}
+              style={{ colorScheme: 'dark' }}
               className="input-field">
               {countries.map((c) => (
                 <option key={c.code} value={c.code}>{c.flag} {c.name}</option>
@@ -116,13 +106,25 @@ export default function RegisterPage() {
             </select>
           </div>
 
-          <label className="flex items-start gap-2 text-xs text-white/60 cursor-pointer">
-            <input type="checkbox" checked={form.agreedToTerms} onChange={(e) => update('agreedToTerms', e.target.checked)}
-              className="mt-0.5 w-4 h-4 rounded accent-brand-500 cursor-pointer" />
-            <span>Я согласен с <Link href="/terms" target="_blank" className="text-brand-400 hover:text-brand-300 underline">условиями использования</Link> и <Link href="/privacy" target="_blank" className="text-brand-400 hover:text-brand-300 underline">политикой конфиденциальности</Link></span>
-          </label>
+          <div className="space-y-3 pt-2 border-t border-white/[0.05]">
+            <label className="flex items-start gap-2.5 text-xs text-white/70 cursor-pointer">
+              <input type="checkbox" checked={form.acceptTerms} onChange={(e) => update('acceptTerms', e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded accent-brand-500 cursor-pointer shrink-0" />
+              <span>Я принимаю <Link href="/terms" target="_blank" className="text-brand-400 hover:text-brand-300 underline">условия использования</Link> <span className="text-red-400">*</span></span>
+            </label>
+            <label className="flex items-start gap-2.5 text-xs text-white/70 cursor-pointer">
+              <input type="checkbox" checked={form.acceptPrivacy} onChange={(e) => update('acceptPrivacy', e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded accent-brand-500 cursor-pointer shrink-0" />
+              <span>Я принимаю <Link href="/privacy" target="_blank" className="text-brand-400 hover:text-brand-300 underline">политику конфиденциальности</Link> <span className="text-red-400">*</span></span>
+            </label>
+            <label className="flex items-start gap-2.5 text-xs text-white/50 cursor-pointer">
+              <input type="checkbox" checked={form.marketingConsent} onChange={(e) => update('marketingConsent', e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded accent-brand-500 cursor-pointer shrink-0" />
+              <span>Присылать мне новости о турнирах и обновлениях (необязательно)</span>
+            </label>
+          </div>
 
-          <button type="submit" disabled={loading || !form.agreedToTerms}
+          <button type="submit" disabled={loading || !canSubmit}
             className="btn-primary w-full text-center justify-center text-base">
             {loading ? (
               <span className="flex items-center justify-center gap-2">

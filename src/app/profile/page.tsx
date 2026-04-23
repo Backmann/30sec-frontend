@@ -18,7 +18,7 @@ export default function ProfilePage() {
   const [tab, setTab] = useState<'stats' | 'answers' | 'tournaments' | 'settings'>('stats');
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
-  const [editForm, setEditForm] = useState({ nickname: '', firstName: '', lastName: '', language: '', showRealName: false });
+  const [editForm, setEditForm] = useState({ nickname: '', firstName: '', lastName: '', language: '', showRealName: false, dateOfBirth: '', gender: '', city: '', bio: '', phone: '' });
   const [saveMsg, setSaveMsg] = useState('');
 
   useEffect(() => {
@@ -45,6 +45,11 @@ export default function ProfilePage() {
         lastName: profile.profile.lastName || '',
         language: profile.profile.language || 'ru',
         showRealName: profile.profile.showRealName || false,
+        dateOfBirth: profile.profile.dateOfBirth ? String(profile.profile.dateOfBirth).split('T')[0] : '',
+        gender: profile.profile.gender || '',
+        city: profile.profile.city || '',
+        bio: profile.profile.bio || '',
+        phone: profile.profile.phone || '',
       });
     }
   }, [profile]);
@@ -268,6 +273,39 @@ export default function ProfilePage() {
                 </select>
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="input-label">Дата рождения</label>
+                  <input type="date" value={editForm.dateOfBirth} onChange={(e) => setEditForm({...editForm, dateOfBirth: e.target.value})}
+                    className="input-field" disabled={!editMode} />
+                </div>
+                <div>
+                  <label className="input-label">Пол</label>
+                  <select value={editForm.gender} onChange={(e) => setEditForm({...editForm, gender: e.target.value})}
+                    className="input-field" disabled={!editMode} style={{colorScheme:'dark'}}>
+                    <option value="">Не указано</option>
+                    <option value="male">Мужской</option>
+                    <option value="female">Женский</option>
+                    <option value="other">Другое</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="input-label">Город</label>
+                <input type="text" value={editForm.city} onChange={(e) => setEditForm({...editForm, city: e.target.value})}
+                  className="input-field" disabled={!editMode} placeholder="Berlin, Moscow, etc." />
+              </div>
+              <div>
+                <label className="input-label">Телефон (необязательно)</label>
+                <input type="tel" value={editForm.phone} onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
+                  className="input-field" disabled={!editMode} placeholder="+49..." />
+              </div>
+              <div>
+                <label className="input-label">О себе <span className="text-white/30">({editForm.bio.length}/500)</span></label>
+                <textarea value={editForm.bio} onChange={(e) => setEditForm({...editForm, bio: e.target.value.slice(0, 500)})}
+                  className="input-field min-h-[80px] resize-y" disabled={!editMode} rows={3}
+                  placeholder="Расскажите о себе несколько слов..." />
+              </div>
               <div className="flex items-center gap-3">
                 <input type="checkbox" id="showName" checked={editForm.showRealName}
                   onChange={(e) => setEditForm({...editForm, showRealName: e.target.checked})}
