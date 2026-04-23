@@ -52,6 +52,12 @@ export default function AdminPage() {
   const [archiveFilterTId, setArchiveFilterTId] = useState<string>(''); // '' = all
   const [qLibrary, setQLibrary] = useState<any[]>([]);
   const [selectedQ, setSelectedQ] = useState<Set<string>>(new Set());
+  // Clear selection when leaving library (tab or subtab change)
+  useEffect(() => {
+    if (tab !== 'questions' || qSubtab !== 'library') {
+      setSelectedQ(new Set());
+    }
+  }, [tab, qSubtab]);
   const [bulkTarget, setBulkTarget] = useState<string>('');
   const [bulkBusy, setBulkBusy] = useState(false);
 
@@ -703,7 +709,7 @@ export default function AdminPage() {
           </div>}
 
           {/* ─── Bulk selection floating panel ─── */}
-          {selectedQ.size > 0 && qSubtab === 'library' && (
+          {selectedQ.size > 0 && tab === 'questions' && qSubtab === 'library' && (
             <div className="fixed bottom-0 left-0 right-0 sm:bottom-6 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-40 bg-dark-800/95 backdrop-blur-xl border-t sm:border border-brand-500/40 sm:rounded-2xl shadow-2xl">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 sm:px-5 sm:py-3 sm:w-[560px]">
                 <div className="flex items-center justify-between sm:justify-start gap-3 sm:shrink-0">
