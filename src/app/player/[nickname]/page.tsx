@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import AchievementsGrid from '@/components/AchievementsGrid';
+import ActivityHeatmap from '@/components/ActivityHeatmap';
+import WeeklyChart from '@/components/WeeklyChart';
 
 function formatDate(d: string | Date | null | undefined) {
   if (!d) return '—';
@@ -15,11 +17,13 @@ export default function PlayerPage() {
   const router = useRouter();
   const [player, setPlayer] = useState<any>(null);
   const [achievements, setAchievements] = useState<any[]>([]);
+  const [activity, setActivity] = useState<any>(null);
   const [error, setError] = useState(false);
 
   useEffect(() => {
     api.getPublicProfile(nickname).then(setPlayer).catch(() => setError(true));
     api.getPublicAchievements(nickname).then(setAchievements).catch(() => {});
+    api.getPlayerActivity(nickname).then(setActivity).catch(() => {});
   }, [nickname]);
 
   if (error) return (
@@ -98,6 +102,53 @@ export default function PlayerPage() {
           <StatCard label="Правильных" value={stats.answersCorrect} color="text-green-400" icon="✓" />
           <StatCard label="Лучшая серия" value={stats.bestStreak} color="text-accent-400" icon="🔥" />
         </div>
+
+        {/* Rank progress */}
+        {player.rankProgress && (
+          <div className="card mb-6 animate-slide-up" style={{ animationDelay: '0.15s', animationFillMode: 'both' }}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                {player.rankProgress.current && (
+                  <span className="text-2xl">{player.rankProgress.current.icon}</span>
+                )}
+                <span className="text-white font-semibold">{player.rankProgress.current?.title || 'Без ранга'}</span>
+              </div>
+              {player.rankProgress.next && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-white/50">→</span>
+                  <span className="text-2xl opacity-60">{player.rankProgress.next.icon}</span>
+                  <span className="text-white/70">{player.rankProgress.next.title}</span>
+                </div>
+              )}
+            </div>
+            <div className="w-full h-2.5 bg-white/5 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-brand-500 to-accent-500 transition-all"
+                style={{ width: `${player.rankProgress.progressPct}%` }}
+              />
+            </div>
+            <div className="text-xs text-white/50 mt-2">
+              {player.rankProgress.next
+                ? <>Осталось <span className="text-brand-400 font-bold">{player.rankProgress.toNext}</span> правильных ответов до «{player.rankProgress.next.title}»</>
+                : <>Достигнут максимальный ранг 👑</>
+              }
+            </div>
+          </div>
+        )}
+
+        {/* Activity heatmap */}
+        {activity?.heatmap?.length > 0 && (
+          <div className="card mb-6 animate-slide-up" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
+            <ActivityHeatmap heatmap={activity.heatmap} />
+          </div>
+        )}
+
+        {/* Weekly chart */}
+        {activity?.weekly?.length > 0 && (
+          <div className="card mb-6 animate-slide-up" style={{ animationDelay: '0.25s', animationFillMode: 'both' }}>
+            <WeeklyChart weekly={activity.weekly} />
+          </div>
+        )}
 
         {/* Recent tournaments */}
         {player.recentTournaments?.length > 0 && (

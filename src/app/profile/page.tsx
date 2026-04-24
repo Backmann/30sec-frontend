@@ -6,6 +6,8 @@ import { useAuth } from '@/lib/store';
 import { api } from '@/lib/api';
 import AvatarUploader from '@/components/AvatarUploader';
 import AchievementsGrid from '@/components/AchievementsGrid';
+import ActivityHeatmap from '@/components/ActivityHeatmap';
+import WeeklyChart from '@/components/WeeklyChart';
 import { detectLocale, getTranslation } from '@/lib/i18n';
 
 export default function ProfilePage() {
@@ -18,6 +20,8 @@ export default function ProfilePage() {
   const [history, setHistory] = useState<any>(null);
   const [tournamentHistory, setTournamentHistory] = useState<any[]>([]);
   const [achievements, setAchievements] = useState<any[]>([]);
+  const [activity, setActivity] = useState<any>(null);
+  const [rankProgress, setRankProgress] = useState<any>(null);
   const [tab, setTab] = useState<'stats' | 'achievements' | 'answers' | 'tournaments' | 'settings'>('stats');
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
@@ -42,6 +46,10 @@ export default function ProfilePage() {
   }, [loading, user]);
 
   useEffect(() => {
+    if (profile?.profile?.nickname) {
+      api.getPlayerActivity(profile.profile.nickname).then(setActivity).catch(() => {});
+      api.getPublicProfile(profile.profile.nickname).then((p: any) => setRankProgress(p.rankProgress)).catch(() => {});
+    }
     if (profile?.profile) {
       setEditForm({
         nickname: profile.profile.nickname || '',
@@ -93,6 +101,10 @@ export default function ProfilePage() {
   ) : false;
 
   const resetForm = () => {
+    if (profile?.profile?.nickname) {
+      api.getPlayerActivity(profile.profile.nickname).then(setActivity).catch(() => {});
+      api.getPublicProfile(profile.profile.nickname).then((p: any) => setRankProgress(p.rankProgress)).catch(() => {});
+    }
     if (profile?.profile) {
       setEditForm({
         nickname: profile.profile.nickname || '',
@@ -227,6 +239,49 @@ export default function ProfilePage() {
                 ))}
               </div>
             </div>
+            {/* Rank progress */}
+            {rankProgress && (
+              <div className="card">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    {rankProgress.current && (
+                      <span className="text-2xl">{rankProgress.current.icon}</span>
+                    )}
+                    <span className="text-white font-semibold">{rankProgress.current?.title || 'Без ранга'}</span>
+                  </div>
+                  {rankProgress.next && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-white/50">→</span>
+                      <span className="text-2xl opacity-60">{rankProgress.next.icon}</span>
+                      <span className="text-white/70">{rankProgress.next.title}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="w-full h-2.5 bg-white/5 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-brand-500 to-accent-500 transition-all"
+                    style={{ width: `${rankProgress.progressPct}%` }}
+                  />
+                </div>
+                <div className="text-xs text-white/50 mt-2">
+                  {rankProgress.next
+                    ? <>Осталось <span className="text-brand-400 font-bold">{rankProgress.toNext}</span> правильных ответов до «{rankProgress.next.title}»</>
+                    : <>Достигнут максимальный ранг 👑</>}
+                </div>
+              </div>
+            )}
+            {/* Activity heatmap */}
+            {activity?.heatmap?.length > 0 && (
+              <div className="card">
+                <ActivityHeatmap heatmap={activity.heatmap} />
+              </div>
+            )}
+            {/* Weekly chart */}
+            {activity?.weekly?.length > 0 && (
+              <div className="card">
+                <WeeklyChart weekly={activity.weekly} />
+              </div>
+            )}
           </div>
         )}
 

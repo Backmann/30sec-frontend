@@ -268,6 +268,9 @@ class ApiClient {
   async getPublicAchievements(nickname: string) {
     return this.request<any[]>('/achievements/player/' + nickname);
   }
+  async getPlayerActivity(nickname: string) {
+    return this.request<{ heatmap: any[]; weekly: any[] }>('/players/' + nickname + '/activity');
+  }
   async getAvatarPresignedUrl(contentType: string, contentLength: number) {
     return this.request<{ uploadUrl: string; publicUrl: string; key: string }>('/uploads/avatar-presigned', {
       method: 'POST',
