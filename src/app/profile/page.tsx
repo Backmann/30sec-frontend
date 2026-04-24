@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/store';
 import { api } from '@/lib/api';
+import AvatarUploader from '@/components/AvatarUploader';
 import { detectLocale, getTranslation } from '@/lib/i18n';
 
 export default function ProfilePage() {
@@ -18,7 +19,7 @@ export default function ProfilePage() {
   const [tab, setTab] = useState<'stats' | 'answers' | 'tournaments' | 'settings'>('stats');
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
-  const [editForm, setEditForm] = useState({ nickname: '', firstName: '', lastName: '', language: '', showRealName: false, dateOfBirth: '', gender: '', city: '', bio: '', phone: '' });
+  const [editForm, setEditForm] = useState({ nickname: '', firstName: '', lastName: '', language: '', showRealName: false, dateOfBirth: '', gender: '', city: '', bio: '', phone: '', avatarUrl: '' });
   const [saveMsg, setSaveMsg] = useState('');
 
   useEffect(() => {
@@ -50,6 +51,7 @@ export default function ProfilePage() {
         city: profile.profile.city || '',
         bio: profile.profile.bio || '',
         phone: profile.profile.phone || '',
+        avatarUrl: profile.profile.avatarUrl || '',
       });
     }
   }, [profile]);
@@ -59,10 +61,43 @@ export default function ProfilePage() {
       await api.updateProfile(editForm);
       setSaveMsg('✓ Сохранено');
       setEditMode(false);
-      api.getMyProfile().then(setProfile);
+      await Promise.all([api.getMyProfile().then(setProfile), loadUser()]);
       setTimeout(() => setSaveMsg(''), 3000);
     } catch (err: any) {
       setSaveMsg('Ошибка: ' + err.message);
+    }
+  };
+
+  // Track if anything changed vs loaded profile
+  const hasChanges = profile?.profile ? (
+    editForm.nickname !== (profile.profile.nickname || '') ||
+    editForm.firstName !== (profile.profile.firstName || '') ||
+    editForm.lastName !== (profile.profile.lastName || '') ||
+    editForm.language !== (profile.profile.language || 'ru') ||
+    editForm.showRealName !== (profile.profile.showRealName || false) ||
+    editForm.dateOfBirth !== (profile.profile.dateOfBirth ? String(profile.profile.dateOfBirth).split('T')[0] : '') ||
+    editForm.gender !== (profile.profile.gender || '') ||
+    editForm.city !== (profile.profile.city || '') ||
+    editForm.bio !== (profile.profile.bio || '') ||
+    editForm.phone !== (profile.profile.phone || '') ||
+    editForm.avatarUrl !== (profile.profile.avatarUrl || '')
+  ) : false;
+
+  const resetForm = () => {
+    if (profile?.profile) {
+      setEditForm({
+        nickname: profile.profile.nickname || '',
+        firstName: profile.profile.firstName || '',
+        lastName: profile.profile.lastName || '',
+        language: profile.profile.language || 'ru',
+        showRealName: profile.profile.showRealName || false,
+        dateOfBirth: profile.profile.dateOfBirth ? String(profile.profile.dateOfBirth).split('T')[0] : '',
+        gender: profile.profile.gender || '',
+        city: profile.profile.city || '',
+        bio: profile.profile.bio || '',
+        phone: profile.profile.phone || '',
+        avatarUrl: profile.profile.avatarUrl || '',
+      });
     }
   };
 
@@ -244,9 +279,18 @@ export default function ProfilePage() {
           <div className="animate-fade-in">
             <div className="card space-y-4">
               <div>
+                <label className="input-label">Аватар</label>
+                <AvatarUploader
+                  currentUrl={editForm.avatarUrl}
+                  fallbackText={editForm.nickname || profile?.profile?.nickname}
+                  onUpload={(url) => setEditForm({...editForm, avatarUrl: url})}
+                  
+                />
+              </div>
+              <div>
                 <label className="input-label">Никнейм</label>
                 <input type="text" value={editForm.nickname} onChange={(e) => setEditForm({...editForm, nickname: e.target.value})}
-                  className="input-field" disabled={!editMode} placeholder="my_nickname" />
+                  className="input-field"  placeholder="my_nickname" />
                 <p className="text-white/20 text-[10px] mt-1">Буквы, цифры и _ (3-20 символов). Можно менять раз в 30 дней.</p>
               </div>
 
@@ -254,19 +298,19 @@ export default function ProfilePage() {
                 <div>
                   <label className="input-label">{t.auth.firstName}</label>
                   <input type="text" value={editForm.firstName} onChange={(e) => setEditForm({...editForm, firstName: e.target.value})}
-                    className="input-field" disabled={!editMode} />
+                    className="input-field"  />
                 </div>
                 <div>
                   <label className="input-label">{t.auth.lastName}</label>
                   <input type="text" value={editForm.lastName} onChange={(e) => setEditForm({...editForm, lastName: e.target.value})}
-                    className="input-field" disabled={!editMode} />
+                    className="input-field"  />
                 </div>
               </div>
 
               <div>
                 <label className="input-label">Язык / Language</label>
                 <select value={editForm.language} onChange={(e) => setEditForm({...editForm, language: e.target.value})}
-                  className="input-field" disabled={!editMode}>
+                  className="input-field" >
                   <option value="ru">Русский</option>
                   <option value="de">Deutsch</option>
                   <option value="en">English</option>
@@ -277,12 +321,12 @@ export default function ProfilePage() {
                 <div>
                   <label className="input-label">Дата рождения</label>
                   <input type="date" value={editForm.dateOfBirth} onChange={(e) => setEditForm({...editForm, dateOfBirth: e.target.value})}
-                    className="input-field" disabled={!editMode} />
+                    className="input-field"  />
                 </div>
                 <div>
                   <label className="input-label">Пол</label>
                   <select value={editForm.gender} onChange={(e) => setEditForm({...editForm, gender: e.target.value})}
-                    className="input-field" disabled={!editMode} style={{colorScheme:'dark'}}>
+                    className="input-field"  style={{colorScheme:'dark'}}>
                     <option value="">Не указано</option>
                     <option value="male">Мужской</option>
                     <option value="female">Женский</option>
@@ -293,37 +337,27 @@ export default function ProfilePage() {
               <div>
                 <label className="input-label">Город</label>
                 <input type="text" value={editForm.city} onChange={(e) => setEditForm({...editForm, city: e.target.value})}
-                  className="input-field" disabled={!editMode} placeholder="Berlin, Moscow, etc." />
+                  className="input-field"  placeholder="Berlin, Moscow, etc." />
               </div>
               <div>
                 <label className="input-label">Телефон (необязательно)</label>
                 <input type="tel" value={editForm.phone} onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
-                  className="input-field" disabled={!editMode} placeholder="+49..." />
+                  className="input-field"  placeholder="+49..." />
               </div>
               <div>
                 <label className="input-label">О себе <span className="text-white/30">({editForm.bio.length}/500)</span></label>
                 <textarea value={editForm.bio} onChange={(e) => setEditForm({...editForm, bio: e.target.value.slice(0, 500)})}
-                  className="input-field min-h-[80px] resize-y" disabled={!editMode} rows={3}
+                  className="input-field min-h-[80px] resize-y"  rows={3}
                   placeholder="Расскажите о себе несколько слов..." />
               </div>
               <div className="flex items-center gap-3">
                 <input type="checkbox" id="showName" checked={editForm.showRealName}
                   onChange={(e) => setEditForm({...editForm, showRealName: e.target.checked})}
-                  className="w-4 h-4 rounded bg-dark-700 border-white/20" disabled={!editMode} />
+                  className="w-4 h-4 rounded bg-dark-700 border-white/20"  />
                 <label htmlFor="showName" className="text-white/60 text-sm">Показывать настоящее имя</label>
               </div>
 
-              <div className="flex gap-2">
-                {!editMode ? (
-                  <button onClick={() => setEditMode(true)} className="btn-primary text-sm">Редактировать</button>
-                ) : (
-                  <>
-                    <button onClick={saveProfile} className="btn-primary text-sm">Сохранить</button>
-                    <button onClick={() => setEditMode(false)} className="btn-ghost text-sm">Отмена</button>
-                  </>
-                )}
-                {saveMsg && <span className="text-green-400 text-sm self-center ml-2">{saveMsg}</span>}
-              </div>
+              {saveMsg && !hasChanges && <div className="text-green-400 text-sm">{saveMsg}</div>}
             </div>
 
             <div className="card mt-4">

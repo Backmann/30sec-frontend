@@ -262,6 +262,12 @@ class ApiClient {
   async getPlayerDetails(id: string) {
     return this.request<any>('/admin/players/' + id);
   }
+  async getAvatarPresignedUrl(contentType: string, contentLength: number) {
+    return this.request<{ uploadUrl: string; publicUrl: string; key: string }>('/uploads/avatar-presigned', {
+      method: 'POST',
+      body: JSON.stringify({ contentType, contentLength }),
+    });
+  }
   async bulkAddToTournament(tournamentId: string, questionIds: string[]) {
     return this.request<any>('/questions/bulk-add-to-tournament', {
       method: 'POST', body: JSON.stringify({ tournamentId, questionIds }),

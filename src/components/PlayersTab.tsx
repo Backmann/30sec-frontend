@@ -104,8 +104,12 @@ export default function PlayersTab() {
             <div key={u.id} onClick={() => setSelectedId(u.id)} className="card hover:border-brand-500/30 cursor-pointer transition">
               <div className="flex items-start gap-3">
                 {/* Avatar */}
-                <div className="shrink-0 w-11 h-11 rounded-xl bg-brand-500/10 text-brand-400 flex items-center justify-center font-bold text-lg">
-                  {(u.profile?.nickname || u.email[0]).charAt(0).toUpperCase()}
+                <div className="shrink-0 w-11 h-11 rounded-xl overflow-hidden bg-brand-500/10 text-brand-400 flex items-center justify-center font-bold text-lg">
+                  {u.profile?.avatarUrl ? (
+                    <img src={u.profile.avatarUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    (u.profile?.nickname || u.email[0]).charAt(0).toUpperCase()
+                  )}
                 </div>
                 {/* Main */}
                 <div className="flex-1 min-w-0">
@@ -149,8 +153,12 @@ export default function PlayersTab() {
                 <div className="space-y-6">
                   {/* Profile block */}
                   <div className="flex items-start gap-4 flex-wrap">
-                    <div className="shrink-0 w-16 h-16 rounded-2xl bg-brand-500/10 text-brand-400 flex items-center justify-center font-bold text-2xl">
-                      {(details.profile?.nickname || details.user.email[0]).charAt(0).toUpperCase()}
+                    <div className="shrink-0 w-16 h-16 rounded-2xl overflow-hidden bg-brand-500/10 text-brand-400 flex items-center justify-center font-bold text-2xl">
+                      {details.profile?.avatarUrl ? (
+                        <img src={details.profile.avatarUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        (details.profile?.nickname || details.user.email[0]).charAt(0).toUpperCase()
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-xl font-bold text-white">{details.profile?.nickname || '—'}</div>
