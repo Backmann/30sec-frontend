@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/store';
 import { api } from '@/lib/api';
 import AvatarUploader from '@/components/AvatarUploader';
+import AchievementsGrid from '@/components/AchievementsGrid';
 import { detectLocale, getTranslation } from '@/lib/i18n';
 
 export default function ProfilePage() {
@@ -16,7 +17,8 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<any>(null);
   const [history, setHistory] = useState<any>(null);
   const [tournamentHistory, setTournamentHistory] = useState<any[]>([]);
-  const [tab, setTab] = useState<'stats' | 'answers' | 'tournaments' | 'settings'>('stats');
+  const [achievements, setAchievements] = useState<any[]>([]);
+  const [tab, setTab] = useState<'stats' | 'achievements' | 'answers' | 'tournaments' | 'settings'>('stats');
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({ nickname: '', firstName: '', lastName: '', language: '', showRealName: false, dateOfBirth: '', gender: '', city: '', bio: '', phone: '', avatarUrl: '', showCity: true, showAge: false, showCountry: true });
@@ -31,6 +33,7 @@ export default function ProfilePage() {
       api.getMyProfile().then(setProfile).catch(() => {});
       api.getMyAnswerHistory().then(setHistory).catch(() => {});
       api.getMyTournamentHistory().then(setTournamentHistory).catch(() => {});
+      api.getMyAchievements().then(setAchievements).catch(() => {});
     }
   }, [user]);
 
@@ -121,6 +124,7 @@ export default function ProfilePage() {
 
   const tabs = [
     { id: 'stats', label: '📊 Статистика' },
+    { id: 'achievements', label: '🏅 Достижения' },
     { id: 'answers', label: '📝 Ответы' },
     { id: 'tournaments', label: '🏆 Турниры' },
     { id: 'settings', label: '⚙️ Настройки' },
@@ -227,6 +231,13 @@ export default function ProfilePage() {
         )}
 
         {/* Answers tab */}
+        {tab === 'achievements' && (
+          <div className="animate-fade-in">
+            <div className="card">
+              <AchievementsGrid achievements={achievements} showLocked={true} />
+            </div>
+          </div>
+        )}
         {tab === 'answers' && history && (
           <div className="animate-fade-in space-y-2">
             {history.data?.length === 0 ? (

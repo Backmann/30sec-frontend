@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { api } from '@/lib/api';
+import AchievementsGrid from '@/components/AchievementsGrid';
 
 function formatDate(d: string | Date | null | undefined) {
   if (!d) return '—';
@@ -13,10 +14,12 @@ export default function PlayerPage() {
   const nickname = params.nickname as string;
   const router = useRouter();
   const [player, setPlayer] = useState<any>(null);
+  const [achievements, setAchievements] = useState<any[]>([]);
   const [error, setError] = useState(false);
 
   useEffect(() => {
     api.getPublicProfile(nickname).then(setPlayer).catch(() => setError(true));
+    api.getPublicAchievements(nickname).then(setAchievements).catch(() => {});
   }, [nickname]);
 
   if (error) return (
@@ -118,6 +121,15 @@ export default function PlayerPage() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {achievements.length > 0 && (
+          <div className="card mt-6 animate-slide-up" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
+            <div className="text-[10px] uppercase tracking-[0.2em] text-white/40 mb-3">
+              Достижения · {achievements.length}
+            </div>
+            <AchievementsGrid achievements={achievements} />
           </div>
         )}
       </main>
