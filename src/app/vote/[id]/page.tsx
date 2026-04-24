@@ -206,7 +206,7 @@ export default function VotePage() {
                         <div className="text-white font-medium leading-tight">{loc?.questionText}</div>
                         {loc?.correctAnswer && <div className="text-green-400/70 text-xs mt-0.5">→ {loc.correctAnswer}</div>}
                         {item.creator && (
-                          <div className="text-white/40 text-[11px] mt-1">Автор: <span className="text-white/70">{item.creator.nickname}</span></div>
+                          <div className="text-white/40 text-[11px] mt-1">Автор: <button onClick={(e) => { e.stopPropagation(); router.push(`/player/${item.creator.nickname}`); }} className="text-white/70 hover:text-brand-400 underline-offset-2 hover:underline">{item.creator.nickname}</button></div>
                         )}
                       </div>
                     </div>
@@ -255,7 +255,7 @@ export default function VotePage() {
                     )}
                     <div className="flex items-center justify-between mt-3 gap-3 flex-wrap">
                       <div className="text-xs text-white/40">
-                        {item.creator ? <>Автор: <span className="text-white/70 font-medium">{item.creator.nickname}</span> {item.creator.flagCode && <span className="ml-1">{item.creator.flagCode.toUpperCase()}</span>}</> : null}
+                        {item.creator ? <>Автор: <button onClick={() => router.push(`/player/${item.creator.nickname}`)} className="text-white/70 hover:text-brand-400 font-medium underline-offset-2 hover:underline">{item.creator.nickname}</button> {item.creator.flagCode && <span className="ml-1">{item.creator.flagCode.toUpperCase()}</span>}</> : null}
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="text-right">

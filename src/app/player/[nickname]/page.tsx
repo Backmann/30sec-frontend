@@ -1,8 +1,12 @@
 'use client';
-
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { api } from '@/lib/api';
+
+function formatDate(d: string | Date | null | undefined) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' });
+}
 
 export default function PlayerPage() {
   const params = useParams();
@@ -37,46 +41,96 @@ export default function PlayerPage() {
     <div className="min-h-screen bg-dark-900">
       <header className="border-b border-white/[0.06] bg-dark-900/80 backdrop-blur-2xl sticky top-0 z-50">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <button onClick={() => router.push('/leaderboard')} className="text-white/40 hover:text-white text-sm">← Рейтинг</button>
+          <button onClick={() => router.back()} className="text-white/40 hover:text-white text-sm">← Назад</button>
           <span className="text-white font-semibold">{player.nickname}</span>
-          <div />
+          <button onClick={() => router.push('/leaderboard')} className="text-white/40 hover:text-white text-sm">Рейтинг</button>
         </div>
       </header>
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
-        <div className="card-glow text-center mb-8 animate-fade-in">
-          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-3xl font-black text-white mx-auto mb-4">
-            {player.nickname[0].toUpperCase()}
+        {/* Hero */}
+        <div className="card-glow text-center mb-6 animate-fade-in py-8 px-6">
+          <div className="w-24 h-24 rounded-3xl overflow-hidden bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-4xl font-black text-white mx-auto mb-4 shadow-xl">
+            {player.avatarUrl ? (
+              <img src={player.avatarUrl} alt={player.nickname} className="w-full h-full object-cover" />
+            ) : (
+              player.nickname[0].toUpperCase()
+            )}
           </div>
-          <h1 className="text-3xl font-bold text-brand-400">{player.nickname}</h1>
-          {player.firstName && <p className="text-white/40 mt-1">{player.firstName} {player.lastName}</p>}
-          <div className="flex items-center justify-center gap-3 mt-3">
-            {player.countryCode && <span className="badge-draft">{player.flagCode?.toUpperCase()} {player.countryCode}</span>}
-            {stats?.rank && <span className="badge-accent">{stats.rank.icon} {stats.rank.title}</span>}
+          <h1 className="text-3xl font-bold text-white">{player.nickname}</h1>
+          {(player.firstName || player.lastName) && (
+            <p className="text-white/50 mt-1 text-sm">{[player.firstName, player.lastName].filter(Boolean).join(' ')}</p>
+          )}
+          <div className="flex items-center justify-center gap-2 flex-wrap mt-3">
+            {player.countryCode && (
+              <span className="px-2.5 py-1 rounded-lg bg-white/5 text-white/70 text-xs font-mono">
+                {player.flagCode?.toUpperCase()} {player.countryCode}{player.city ? ` · ${player.city}` : ''}
+              </span>
+            )}
+            {player.age && (
+              <span className="px-2.5 py-1 rounded-lg bg-white/5 text-white/70 text-xs">
+                {player.age} лет
+              </span>
+            )}
+            {player.rank && (
+              <span className="px-2.5 py-1 rounded-lg bg-accent-500/10 text-accent-400 text-xs font-semibold">
+                {player.rank.icon} {player.rank.title}
+              </span>
+            )}
           </div>
-          <p className="text-white/20 text-xs mt-3">С {new Date(player.memberSince).toLocaleDateString()}</p>
+          {player.bio && (
+            <p className="text-white/60 text-sm mt-4 max-w-md mx-auto italic">"{player.bio}"</p>
+          )}
+          <p className="text-white/25 text-xs mt-4">Играет с {formatDate(player.memberSince)}</p>
         </div>
 
-        {stats && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 animate-slide-up" style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
-            {[
-              { label: 'Ответов', value: stats.totalAnswered, color: 'text-white' },
-              { label: 'Правильных', value: stats.totalCorrect, color: 'text-green-400' },
-              { label: 'Точность', value: `${stats.accuracyPercent}%`, color: 'text-brand-400' },
-              { label: 'Лучшая серия', value: stats.bestStreak, color: 'text-accent-400' },
-              { label: 'Побед 12:0', value: stats.wins12_0, color: 'text-green-400' },
-              { label: 'Нед. финалы', value: stats.weeklyFinals, color: 'text-white/60' },
-              { label: 'Мес. финалы', value: stats.monthlyFinals, color: 'text-white/60' },
-              { label: 'Сез. финалы', value: stats.seasonFinals, color: 'text-white/60' },
-            ].map((s, i) => (
-              <div key={i} className="card text-center">
-                <div className={`text-2xl font-black font-mono ${s.color}`}>{s.value}</div>
-                <div className="text-white/25 text-[10px] mt-1">{s.label}</div>
-              </div>
-            ))}
+        {/* Stats grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 animate-slide-up" style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
+          <StatCard label="Побед" value={stats.wins} color="text-accent-400" icon="🏆" />
+          <StatCard label="Поражений" value={stats.losses} color="text-red-400" icon="·" />
+          <StatCard label="Winrate" value={`${stats.winRate}%`} color="text-brand-400" icon="⚡" />
+          <StatCard label="Точность" value={`${stats.accuracy}%`} color="text-green-400" icon="🎯" />
+          <StatCard label="Турниров" value={stats.tournamentsPlayed} color="text-white" icon="🎮" />
+          <StatCard label="Ответов" value={stats.answersTotal} color="text-white/70" icon="💭" />
+          <StatCard label="Правильных" value={stats.answersCorrect} color="text-green-400" icon="✓" />
+          <StatCard label="Лучшая серия" value={stats.bestStreak} color="text-accent-400" icon="🔥" />
+        </div>
+
+        {/* Recent tournaments */}
+        {player.recentTournaments?.length > 0 && (
+          <div className="card animate-slide-up" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
+            <div className="text-[10px] uppercase tracking-[0.2em] text-white/40 mb-3">Последние турниры</div>
+            <div className="space-y-2">
+              {player.recentTournaments.map((t: any) => (
+                <div key={t.id} className="flex items-center gap-3 py-2 px-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.04] transition cursor-pointer" onClick={() => router.push('/watch/' + t.id)}>
+                  <span className="text-lg shrink-0">
+                    {t.matchStatus === 'WON' ? '🏆' : t.matchStatus === 'LOST' ? '·' : '·'}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-white text-sm truncate">{t.title}</div>
+                    <div className="text-white/40 text-[10px]">{formatDate(t.endAt)}</div>
+                  </div>
+                  <div className="font-mono text-sm shrink-0">
+                    <span className={t.matchStatus === 'WON' ? 'text-accent-400 font-bold' : 'text-white'}>{t.scoreUser}</span>
+                    <span className="text-white/30 mx-1">:</span>
+                    <span className="text-white/60">{t.scoreSystem}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+function StatCard({ label, value, color, icon }: { label: string; value: any; color?: string; icon?: string }) {
+  return (
+    <div className="card text-center py-4">
+      {icon && <div className="text-lg opacity-60 mb-0.5">{icon}</div>}
+      <div className={`text-2xl font-black font-mono ${color || 'text-white'}`}>{value}</div>
+      <div className="text-white/30 text-[10px] mt-1 uppercase tracking-wider">{label}</div>
     </div>
   );
 }

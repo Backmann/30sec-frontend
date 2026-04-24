@@ -483,7 +483,7 @@ export default function AdminLivePage() {
                         <div className="text-white font-medium leading-tight mb-1">{loc?.questionText}</div>
                         {loc?.correctAnswer && <div className="text-green-400/70 text-xs mb-1">→ {loc.correctAnswer}</div>}
                         {w.creator && (
-                          <div className="text-white/40 text-xs">Автор: <span className="text-white/70">{w.creator.nickname}</span>{w.creator.flagCode && <span className="ml-1">{w.creator.flagCode.toUpperCase()}</span>}</div>
+                          <div className="text-white/40 text-xs">Автор: <button onClick={(e) => { e.stopPropagation(); router.push(`/player/${w.creator.nickname}`); }} className="text-white/70 hover:text-brand-400 underline-offset-2 hover:underline">{w.creator.nickname}</button>{w.creator.flagCode && <span className="ml-1">{w.creator.flagCode.toUpperCase()}</span>}</div>
                         )}
                       </div>
                       <div className="shrink-0 text-right">

@@ -19,7 +19,7 @@ export default function ProfilePage() {
   const [tab, setTab] = useState<'stats' | 'answers' | 'tournaments' | 'settings'>('stats');
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
-  const [editForm, setEditForm] = useState({ nickname: '', firstName: '', lastName: '', language: '', showRealName: false, dateOfBirth: '', gender: '', city: '', bio: '', phone: '', avatarUrl: '' });
+  const [editForm, setEditForm] = useState({ nickname: '', firstName: '', lastName: '', language: '', showRealName: false, dateOfBirth: '', gender: '', city: '', bio: '', phone: '', avatarUrl: '', showCity: true, showAge: false, showCountry: true });
   const [saveMsg, setSaveMsg] = useState('');
 
   useEffect(() => {
@@ -52,6 +52,9 @@ export default function ProfilePage() {
         bio: profile.profile.bio || '',
         phone: profile.profile.phone || '',
         avatarUrl: profile.profile.avatarUrl || '',
+        showCity: profile.profile.showCity !== false,
+        showAge: profile.profile.showAge === true,
+        showCountry: profile.profile.showCountry !== false,
       });
     }
   }, [profile]);
@@ -80,7 +83,10 @@ export default function ProfilePage() {
     editForm.city !== (profile.profile.city || '') ||
     editForm.bio !== (profile.profile.bio || '') ||
     editForm.phone !== (profile.profile.phone || '') ||
-    editForm.avatarUrl !== (profile.profile.avatarUrl || '')
+    editForm.avatarUrl !== (profile.profile.avatarUrl || '') ||
+    editForm.showCity !== (profile.profile.showCity !== false) ||
+    editForm.showAge !== (profile.profile.showAge === true) ||
+    editForm.showCountry !== (profile.profile.showCountry !== false)
   ) : false;
 
   const resetForm = () => {
@@ -97,6 +103,9 @@ export default function ProfilePage() {
         bio: profile.profile.bio || '',
         phone: profile.profile.phone || '',
         avatarUrl: profile.profile.avatarUrl || '',
+        showCity: profile.profile.showCity !== false,
+        showAge: profile.profile.showAge === true,
+        showCountry: profile.profile.showCountry !== false,
       });
     }
   };
@@ -350,11 +359,35 @@ export default function ProfilePage() {
                   className="input-field min-h-[80px] resize-y"  rows={3}
                   placeholder="Расскажите о себе несколько слов..." />
               </div>
-              <div className="flex items-center gap-3">
-                <input type="checkbox" id="showName" checked={editForm.showRealName}
-                  onChange={(e) => setEditForm({...editForm, showRealName: e.target.checked})}
-                  className="w-4 h-4 rounded bg-dark-700 border-white/20"  />
-                <label htmlFor="showName" className="text-white/60 text-sm">Показывать настоящее имя</label>
+              <div className="pt-3 border-t border-white/[0.05]">
+                <div className="text-[10px] uppercase tracking-wider text-white/40 mb-3">🔒 Приватность публичного профиля</div>
+                <div className="space-y-2.5">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" checked={editForm.showRealName}
+                      onChange={(e) => setEditForm({...editForm, showRealName: e.target.checked})}
+                      className="w-4 h-4 rounded bg-dark-700 border-white/20 accent-brand-500" />
+                    <span className="text-white/70 text-sm">Показывать настоящее имя</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" checked={editForm.showCountry}
+                      onChange={(e) => setEditForm({...editForm, showCountry: e.target.checked})}
+                      className="w-4 h-4 rounded bg-dark-700 border-white/20 accent-brand-500" />
+                    <span className="text-white/70 text-sm">Показывать страну и флаг</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" checked={editForm.showCity}
+                      onChange={(e) => setEditForm({...editForm, showCity: e.target.checked})}
+                      className="w-4 h-4 rounded bg-dark-700 border-white/20 accent-brand-500" />
+                    <span className="text-white/70 text-sm">Показывать город</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" checked={editForm.showAge}
+                      onChange={(e) => setEditForm({...editForm, showAge: e.target.checked})}
+                      className="w-4 h-4 rounded bg-dark-700 border-white/20 accent-brand-500" />
+                    <span className="text-white/70 text-sm">Показывать возраст (вычисляется из даты рождения)</span>
+                  </label>
+                </div>
+                <div className="text-[10px] text-white/30 mt-3">Email никогда не показывается другим игрокам</div>
               </div>
 
               {saveMsg && !hasChanges && <div className="text-green-400 text-sm">{saveMsg}</div>}
