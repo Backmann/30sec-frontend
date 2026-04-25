@@ -111,6 +111,36 @@ class ApiClient {
       body: JSON.stringify({ email, code }),
     });
   }
+  async submitFeedback(data: {
+    category: 'bug' | 'suggestion' | 'question' | 'other';
+    subject: string;
+    message: string;
+    email?: string;
+    url?: string;
+  }) {
+    return this.request<{ id: string; status: string }>('/feedback', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+  async getFeedbackList(params: { status?: string; category?: string; limit?: number; offset?: number } = {}) {
+    const q = new URLSearchParams();
+    if (params.status) q.set('status', params.status);
+    if (params.category) q.set('category', params.category);
+    if (params.limit) q.set('limit', String(params.limit));
+    if (params.offset) q.set('offset', String(params.offset));
+    const qs = q.toString() ? '?' + q.toString() : '';
+    return this.request<{ items: any[]; total: number }>('/feedback/admin' + qs);
+  }
+  async getFeedbackStats() {
+    return this.request<any>('/feedback/admin/stats');
+  }
+  async updateFeedback(id: string, data: { status?: string; adminNotes?: string }) {
+    return this.request<any>('/feedback/admin/' + id, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
   async resendVerificationCode() {
     return this.request<{ sent: boolean }>('/auth/resend-code', {
       method: 'POST',
