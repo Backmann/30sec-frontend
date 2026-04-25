@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import TrackingPing from '@/components/TrackingPing';
+import CookieBanner from '@/components/CookieBanner';
 
 export const metadata: Metadata = {
   title: '30sec. — Intellectual Tournament',
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ru" className="dark">
       <body className="min-h-screen bg-dark-900 overflow-x-hidden">
         <TrackingPing />
+        <CookieBanner />
         <ErrorBoundary>{children}</ErrorBoundary>
       </body>
     </html>

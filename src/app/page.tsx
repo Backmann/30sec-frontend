@@ -1,4 +1,5 @@
 'use client';
+import Footer from '@/components/Footer';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -129,6 +130,7 @@ export default function Home() {
             </div>
           ))}
         </div>
+        <Footer />
       </main>
 
       {/* Bottom gradient line */}
