@@ -111,6 +111,9 @@ class ApiClient {
       body: JSON.stringify({ email, code }),
     });
   }
+  async getSystemHealth() {
+    return this.request<any>('/admin/health');
+  }
   async submitFeedback(data: {
     category: 'bug' | 'suggestion' | 'question' | 'other';
     subject: string;
