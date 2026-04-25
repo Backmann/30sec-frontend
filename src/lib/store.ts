@@ -69,6 +69,11 @@ export const useAuth = create<AuthState>((set) => ({
   },
 
   loadUser: async () => {
+    // Skip request if no token — avoids noisy 401 in console
+    if (typeof window !== 'undefined' && !localStorage.getItem('accessToken')) {
+      set({ user: null });
+      return;
+    }
     try {
       const user = await api.getMe();
       set({ user });
