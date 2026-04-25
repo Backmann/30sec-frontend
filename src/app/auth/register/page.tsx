@@ -42,7 +42,7 @@ export default function RegisterPage() {
     if (!form.acceptTerms || !form.acceptPrivacy) return;
     try {
       await register({ ...form, language: locale });
-      router.push('/dashboard');
+      router.push(`/auth/verify-email?email=${encodeURIComponent(form.email)}`);
     } catch {}
   };
 

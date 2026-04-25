@@ -78,6 +78,21 @@ export default function DashboardPage() {
       <header className="border-b border-white/[0.06] bg-dark-900/80 backdrop-blur-2xl sticky top-0 z-50"><div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between"><div className="flex items-center gap-6"><h1 className="text-xl font-display font-black tracking-tight cursor-pointer" onClick={() => router.push('/')}><span className="text-white">30</span><span className="text-brand-400">sec</span><span className="text-accent-400">.</span></h1><nav className="hidden sm:flex items-center gap-1"><button className="nav-link-active">{t.nav.home}</button><button onClick={() => router.push('/leaderboard')} className="nav-link">{t.nav.leaderboard}</button>{isAdmin && <button onClick={() => router.push('/admin')} className="nav-link text-accent-400">{t.nav.admin}</button>}</nav></div><div className="flex items-center gap-3"><button onClick={() => router.push('/profile')} className="hidden sm:block text-right hover:opacity-80"><div className="text-sm font-semibold text-brand-400">{user.profile?.nickname}</div><div className="text-[10px] text-white/30 uppercase">{user.role}</div></button><NotificationBell /><button onClick={() => { logout(); router.push('/'); }} className="btn-icon text-xs"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg></button><button onClick={() => setMob(!mob)} className="sm:hidden btn-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">{mob ? <path d="M18 6L6 18M6 6l12 12"/> : <path d="M3 12h18M3 6h18M3 18h18"/>}</svg></button></div></div>{mob && <div className="sm:hidden border-t border-white/[0.06] px-4 py-3 space-y-1"><button onClick={() => setMob(false)} className="nav-link-active w-full text-left">{t.nav.home}</button><button onClick={() => { router.push('/leaderboard'); setMob(false); }} className="nav-link w-full text-left">{t.nav.leaderboard}</button><button onClick={() => { router.push('/profile'); setMob(false); }} className="nav-link w-full text-left">{t.nav.profile}</button>{isAdmin && <button onClick={() => { router.push('/admin'); setMob(false); }} className="nav-link text-accent-400 w-full text-left">{t.nav.admin}</button>}</div>}</header>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        {!user.emailVerifiedAt && (
+          <div className="mb-6 bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 animate-fade-in">
+            <div className="text-2xl shrink-0">📧</div>
+            <div className="flex-1">
+              <div className="text-amber-400 font-semibold text-sm">Подтвердите email</div>
+              <div className="text-white/60 text-xs mt-0.5">
+                Чтобы участвовать в турнирах и создавать вопросы, подтвердите свой email
+              </div>
+            </div>
+            <button onClick={() => router.push('/auth/verify-email')} className="btn-primary text-xs whitespace-nowrap shrink-0">
+              Подтвердить →
+            </button>
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8 animate-fade-in"><div><h2 className="text-2xl sm:text-3xl font-display font-bold text-white">{t.home.welcome}, <span className="text-brand-400">{user.profile?.nickname}</span></h2><p className="text-white/30 mt-1 text-sm">{t.home.subtitle}</p></div>{!isAdmin && ps && ps.totalAnswered > 0 && <div className="flex gap-4">{[{v:ps.totalCorrect,l:'✓',c:'text-green-400'},{v:`${ps.accuracyPercent}%`,l:'ACC',c:'text-brand-400'},{v:ps.bestStreak,l:'🔥',c:'text-accent-400'}].map((s,i)=><div key={i} className="text-center px-3 py-2 rounded-2xl bg-white/[0.03] border border-white/[0.06]"><div className={`text-lg font-bold font-mono ${s.c}`}>{s.v}</div><div className="text-[10px] text-white/30">{s.l}</div></div>)}</div>}</div>
 
         {upcoming.length > 0 && <section className="mb-10 animate-slide-up" style={{animationDelay:'0.05s',animationFillMode:'both'}}><h3 className="section-title mb-4"><span className="text-accent-400">⏳</span> Предстоящие турниры</h3><div className="grid gap-4 sm:grid-cols-2">{upcoming.map(tr => {

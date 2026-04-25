@@ -105,6 +105,17 @@ class ApiClient {
     return result;
   }
 
+  async verifyEmail(email: string, code: string) {
+    return this.request<{ success: boolean }>('/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ email, code }),
+    });
+  }
+  async resendVerificationCode() {
+    return this.request<{ sent: boolean }>('/auth/resend-code', {
+      method: 'POST',
+    });
+  }
   async login(email: string, password: string) {
     const result = await this.request<any>('/auth/login', {
       method: 'POST', body: JSON.stringify({ email, password }),

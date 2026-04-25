@@ -5,6 +5,7 @@ interface User {
   id: string;
   email: string;
   role: string;
+  emailVerifiedAt?: string | null;
   profile: {
     nickname: string;
     firstName: string;
