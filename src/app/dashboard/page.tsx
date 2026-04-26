@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/store';
 import { api } from '@/lib/api';
 import { detectLocale, getTranslation } from '@/lib/i18n';
 import NotificationBell from '@/components/NotificationBell';
+import QueueJoinWidget from '@/components/QueueJoinWidget';
 
 function Countdown({ target }: { target: string }) {
   const [diff, setDiff] = useState(0);
@@ -94,6 +95,8 @@ export default function DashboardPage() {
         )}
 
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8 animate-fade-in"><div><h2 className="text-2xl sm:text-3xl font-display font-bold text-white">{t.home.welcome}, <span className="text-brand-400">{user.profile?.nickname}</span></h2><p className="text-white/30 mt-1 text-sm">{t.home.subtitle}</p></div>{!isAdmin && ps && ps.totalAnswered > 0 && <div className="flex gap-4">{[{v:ps.totalCorrect,l:'✓',c:'text-green-400'},{v:`${ps.accuracyPercent}%`,l:'ACC',c:'text-brand-400'},{v:ps.bestStreak,l:'🔥',c:'text-accent-400'}].map((s,i)=><div key={i} className="text-center px-3 py-2 rounded-2xl bg-white/[0.03] border border-white/[0.06]"><div className={`text-lg font-bold font-mono ${s.c}`}>{s.v}</div><div className="text-[10px] text-white/30">{s.l}</div></div>)}</div>}</div>
+
+        {!isAdmin && <QueueJoinWidget />}
 
         {upcoming.length > 0 && <section className="mb-10 animate-slide-up" style={{animationDelay:'0.05s',animationFillMode:'both'}}><h3 className="section-title mb-4"><span className="text-accent-400">⏳</span> Предстоящие турниры</h3><div className="grid gap-4 sm:grid-cols-2">{upcoming.map(tr => {
           const st = getMyStatus(tr);

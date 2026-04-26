@@ -494,6 +494,49 @@ class ApiClient {
   async getAdminDashboard() { return this.request<any>('/admin/dashboard'); }
   async getAdminLogs(page = 1) { return this.request<any>(`/admin/logs?page=${page}`); }
   async getAdminUsers(page = 1) { return this.request<any>(`/admin/users?page=${page}`); }
+
+  // ─── Tournament Queue ─────────────────────────
+  async createTournamentRequest(data: {
+    language: string;
+    preferredDays?: string[];
+    preferredTimeSlot?: string;
+    themes?: string[];
+    comment?: string;
+  }) {
+    return this.request<any>('/tournament-requests', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+  async withdrawTournamentRequest(id: string) {
+    return this.request<any>(`/tournament-requests/${id}`, { method: 'DELETE' });
+  }
+  async getMyTournamentRequests() {
+    return this.request<any[]>('/tournament-requests/me');
+  }
+  async getPublicQueueStats() {
+    return this.request<{ byLanguage: Record<string, { bucket: string }> }>(
+      '/tournament-requests/stats/public',
+    );
+  }
+  async getAdminQueueOverview() {
+    return this.request<any>('/tournament-requests/admin/overview');
+  }
+  async getAdminQueueList(params: { language?: string; status?: string; limit?: number; offset?: number } = {}) {
+    const q = new URLSearchParams();
+    if (params.language) q.set('language', params.language);
+    if (params.status) q.set('status', params.status);
+    if (params.limit) q.set('limit', String(params.limit));
+    if (params.offset) q.set('offset', String(params.offset));
+    const qs = q.toString() ? '?' + q.toString() : '';
+    return this.request<{ items: any[]; total: number }>('/tournament-requests/admin/list' + qs);
+  }
+  async fulfillTournamentRequests(tournamentId: string, requestIds: string[]) {
+    return this.request<any>('/tournament-requests/admin/fulfill', {
+      method: 'PATCH',
+      body: JSON.stringify({ tournamentId, requestIds }),
+    });
+  }
 }
 
 export class ApiError extends Error {

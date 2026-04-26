@@ -10,8 +10,9 @@ import ReorderableQuestions from '@/components/ReorderableQuestions';
 import PlayersTab from '@/components/PlayersTab';
 import FeedbackTab from '@/components/FeedbackTab';
 import HealthTab from '@/components/HealthTab';
+import QueueAdminTab from '@/components/QueueAdminTab';
 
-type Tab = 'dashboard' | 'tournaments' | 'questions' | 'users' | 'feedback' | 'health' | 'logs';
+type Tab = 'dashboard' | 'tournaments' | 'questions' | 'users' | 'queue' | 'feedback' | 'health' | 'logs';
 const RQ = 23;
 
 export default function AdminPage() {
@@ -400,7 +401,7 @@ export default function AdminPage() {
   const wk = new Date(Date.now()-7*86400000).toISOString();
   const active = tournaments.filter(t => ['LIVE','SCHEDULED','DRAFT'].includes(t.status));
   const fin = tournaments.filter(t => { if (t.status !== 'FINISHED') return false; const d = t.endAt || t.createdAt; if (fFrom && new Date(d)<new Date(fFrom)) return false; if (fTo && new Date(d)>new Date(fTo+'T23:59:59')) return false; if (!fFrom && !fTo) return new Date(d)>new Date(wk); return true; });
-  const tabs: {id:Tab;icon:string;label:string}[] = [{id:'dashboard',icon:'D',label:'Дашборд'},{id:'tournaments',icon:'T',label:'Турниры'},{id:'questions',icon:'Q',label:'Вопросы'},{id:'users',icon:'U',label:'Игроки'},{id:'feedback',icon:'F',label:'Обратная связь'},{id:'health',icon:'H',label:'Здоровье'},{id:'logs',icon:'L',label:'Журнал'}];
+  const tabs: {id:Tab;icon:string;label:string}[] = [{id:'dashboard',icon:'D',label:'Дашборд'},{id:'tournaments',icon:'T',label:'Турниры'},{id:'questions',icon:'Q',label:'Вопросы'},{id:'users',icon:'U',label:'Игроки'},{id:'queue',icon:'📅',label:'Очередь'},{id:'feedback',icon:'F',label:'Обратная связь'},{id:'health',icon:'H',label:'Здоровье'},{id:'logs',icon:'L',label:'Журнал'}];
   const qc = (t: any) => t.tournamentQuestions?.length || 0;
   const qr = (t: any) => qc(t) >= RQ;
   const apprd = (t: any) => (t.participants || []).filter((p: any) => p.matchStatus === 'APPROVED' || p.matchStatus === 'PLAYING').length;
@@ -794,6 +795,7 @@ export default function AdminPage() {
           })()}
 
           {tab==='users' && <PlayersTab />}
+          {tab==='queue' && <QueueAdminTab />}
           {tab==='feedback' && <FeedbackTab />}
           {tab==='health' && <HealthTab />}
           {tab==='logs'&&logs?.data&&<div className="animate-fade-in"><h2 className="text-xl font-bold text-white mb-5">Журнал</h2><div className="space-y-1">{logs.data.map((l:any)=><div key={l.id} className="card py-3 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-1"><div className="flex items-center gap-2"><span className="badge-draft text-[10px]">{l.actionType}</span><span className="text-white/40 text-xs">{l.entityType}</span></div><div className="text-white/20 text-[11px] font-mono">{l.adminNickname} | {new Date(l.createdAt).toLocaleString()}</div></div>)}</div></div>}
