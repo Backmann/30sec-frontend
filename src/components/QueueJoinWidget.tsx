@@ -68,6 +68,14 @@ export default function QueueJoinWidget() {
 
   useEffect(() => { if (user) refresh(); }, [user]);
 
+  // Lock body scroll while modal is open (matches FeedbackButton pattern)
+  useEffect(() => {
+    if (showForm) {
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = ''; };
+    }
+  }, [showForm]);
+
   const resetForm = () => {
     setLanguage(user?.profile?.language || 'ru');
     setDays(new Set());
@@ -122,72 +130,94 @@ export default function QueueJoinWidget() {
   const usedLangs = new Set(mine.map(r => r.language));
   const availableLangs = LANGUAGES.filter(l => !usedLangs.has(l.code));
 
-  return (
-    <section className="mb-8 animate-slide-up" style={{ animationDelay: '0.03s', animationFillMode: 'both' }}>
-      <h3 className="section-title mb-4">
-        <span className="text-brand-400">📅</span> Хочешь следующий турнир?
-      </h3>
+  // If form is open and selected language is no longer available (e.g. user just joined),
+  // pick the first available one.
+  const selectedLanguage = availableLangs.some(l => l.code === language)
+    ? language
+    : (availableLangs[0]?.code || language);
 
-      {mine.length === 0 ? (
-        <div className="card-glow">
-          <div className="flex items-start gap-3 mb-4">
-            <div className="text-2xl shrink-0">🎯</div>
-            <div className="flex-1">
-              <div className="text-white font-semibold">Запишись в очередь</div>
-              <div className="text-white/50 text-xs mt-1">
-                Так мы поймём, на каком языке собирать следующий турнир и какие вопросы готовить.
+  // Modal must be rendered OUTSIDE the animated section so that fixed
+  // positioning is relative to viewport, not the section's transform context.
+  return (
+    <>
+      <section className="mb-8 animate-slide-up" style={{ animationDelay: '0.03s', animationFillMode: 'both' }}>
+        <h3 className="section-title mb-4">
+          <span className="text-brand-400">📅</span> Хочешь следующий турнир?
+        </h3>
+
+        {mine.length === 0 ? (
+          <div className="card-glow">
+            <div className="flex items-start gap-3">
+              <div className="text-2xl shrink-0">🎯</div>
+              <div className="flex-1">
+                <div className="text-white font-semibold">Запишись в очередь</div>
+                <div className="text-white/50 text-xs mt-1">
+                  Так мы поймём, на каком языке собирать следующий турнир и какие вопросы готовить.
+                </div>
               </div>
+              <button onClick={openForm} className="btn-primary text-sm whitespace-nowrap shrink-0">
+                Записаться
+              </button>
             </div>
-            <button onClick={openForm} className="btn-primary text-sm whitespace-nowrap shrink-0">
-              Записаться
-            </button>
           </div>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {mine.map((r) => {
-            const li = langInfo(r.language);
-            const others = Math.max(0, (r.queueSize ?? 1) - 1);
-            return (
-              <div key={r.id} className="card flex flex-col sm:flex-row sm:items-center gap-3">
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="text-2xl shrink-0">{li.flag}</div>
-                  <div className="min-w-0">
-                    <div className="text-white font-semibold text-sm">{li.label}</div>
-                    <div className="text-white/40 text-xs mt-0.5">
-                      {others > 0
-                        ? <>Вы и ещё {others} {pluralRu(others, ['игрок', 'игрока', 'игроков'])} в очереди</>
-                        : 'Пока в очереди только вы'}
-                      {r.themes?.length > 0 && (
-                        <span className="ml-2 hidden sm:inline">
-                          · темы: {r.themes.slice(0, 3).map((t: string) => themeLabel(t)).join(', ')}
-                          {r.themes.length > 3 && ' …'}
-                        </span>
-                      )}
+        ) : (
+          <div className="space-y-2">
+            {mine.map((r) => {
+              const li = langInfo(r.language);
+              const others = Math.max(0, (r.queueSize ?? 1) - 1);
+              return (
+                <div key={r.id} className="card flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="text-2xl shrink-0">{li.flag}</div>
+                    <div className="min-w-0">
+                      <div className="text-white font-semibold text-sm">{li.label}</div>
+                      <div className="text-white/40 text-xs mt-0.5">
+                        {others > 0
+                          ? <>Вы и ещё {others} {pluralRu(others, ['игрок', 'игрока', 'игроков'])} в очереди</>
+                          : 'Пока в очереди только вы'}
+                        {r.themes?.length > 0 && (
+                          <span className="ml-2 hidden sm:inline">
+                            · темы: {r.themes.slice(0, 3).map((t: string) => themeLabel(t)).join(', ')}
+                            {r.themes.length > 3 && ' …'}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
+                  <button onClick={() => withdraw(r.id)} className="btn-ghost text-xs whitespace-nowrap text-white/50 hover:text-red-400">
+                    Снять запись
+                  </button>
                 </div>
-                <button onClick={() => withdraw(r.id)} className="btn-ghost text-xs whitespace-nowrap text-white/50 hover:text-red-400">
-                  Снять запись
-                </button>
-              </div>
-            );
-          })}
-          {availableLangs.length > 0 && (
-            <button onClick={openForm} className="btn-secondary w-full text-sm">
-              + Записаться на другом языке
-            </button>
-          )}
-        </div>
-      )}
+              );
+            })}
+            {availableLangs.length > 0 && (
+              <button onClick={openForm} className="btn-secondary w-full text-sm">
+                + Записаться на другом языке
+              </button>
+            )}
+          </div>
+        )}
+      </section>
 
-      {/* Modal form */}
+      {/* Modal — rendered outside the animated section */}
       {showForm && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto" onClick={() => setShowForm(false)}>
-          <div onClick={e => e.stopPropagation()} className="bg-dark-800 border border-white/10 rounded-2xl max-w-lg w-full my-8 animate-slide-up">
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setShowForm(false)}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="bg-dark-800 border border-white/10 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto animate-slide-up"
+          >
             <div className="p-5 border-b border-white/[0.06] flex items-center justify-between sticky top-0 bg-dark-800 z-10">
               <h3 className="text-lg font-bold text-white">Запись в очередь</h3>
-              <button onClick={() => setShowForm(false)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 flex items-center justify-center">✕</button>
+              <button
+                onClick={() => setShowForm(false)}
+                className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 flex items-center justify-center"
+                aria-label="Закрыть"
+              >
+                ✕
+              </button>
             </div>
 
             <div className="p-5 space-y-5">
@@ -196,19 +226,28 @@ export default function QueueJoinWidget() {
                 <label className="input-label">
                   Язык турнира <span className="text-red-400">*</span>
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {availableLangs.map(l => (
-                    <button key={l.code} onClick={() => setLanguage(l.code)}
-                      className={`px-3 py-2.5 rounded-xl border text-sm transition ${
-                        language === l.code
-                          ? 'bg-brand-500/15 border-brand-500/40 text-white'
-                          : 'bg-white/[0.02] border-white/10 text-white/60 hover:bg-white/5'
-                      }`}>
-                      <div className="text-xl">{l.flag}</div>
-                      <div className="text-[11px] mt-0.5">{l.label}</div>
-                    </button>
-                  ))}
-                </div>
+                {availableLangs.length === 0 ? (
+                  <div className="text-white/50 text-sm bg-white/[0.04] border border-white/10 rounded-xl p-3">
+                    Вы уже записаны на все доступные языки.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {availableLangs.map(l => (
+                      <button
+                        key={l.code}
+                        onClick={() => setLanguage(l.code)}
+                        className={`px-3 py-2.5 rounded-xl border text-sm transition ${
+                          selectedLanguage === l.code
+                            ? 'bg-brand-500/20 border-brand-500/60 text-white'
+                            : 'bg-white/[0.05] border-white/15 text-white/70 hover:bg-white/10 hover:border-white/25'
+                        }`}
+                      >
+                        <div className="text-xl">{l.flag}</div>
+                        <div className="text-[11px] mt-0.5">{l.label}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Days */}
@@ -216,12 +255,15 @@ export default function QueueJoinWidget() {
                 <label className="input-label">Удобные дни (можно несколько)</label>
                 <div className="flex flex-wrap gap-1.5">
                   {DAYS.map(d => (
-                    <button key={d.code} onClick={() => toggle(days, d.code, setDays)}
+                    <button
+                      key={d.code}
+                      onClick={() => toggle(days, d.code, setDays)}
                       className={`px-3 py-1.5 rounded-xl border text-xs font-semibold transition ${
                         days.has(d.code)
-                          ? 'bg-brand-500/15 border-brand-500/40 text-brand-300'
-                          : 'bg-white/[0.02] border-white/10 text-white/50 hover:bg-white/5'
-                      }`}>
+                          ? 'bg-brand-500/20 border-brand-500/60 text-brand-200'
+                          : 'bg-white/[0.05] border-white/15 text-white/60 hover:bg-white/10'
+                      }`}
+                    >
                       {d.label}
                     </button>
                   ))}
@@ -233,12 +275,15 @@ export default function QueueJoinWidget() {
                 <label className="input-label">Удобное время</label>
                 <div className="grid grid-cols-3 gap-2">
                   {TIME_SLOTS.map(s => (
-                    <button key={s.code} onClick={() => setTimeSlot(timeSlot === s.code ? '' : s.code)}
+                    <button
+                      key={s.code}
+                      onClick={() => setTimeSlot(timeSlot === s.code ? '' : s.code)}
                       className={`px-3 py-2.5 rounded-xl border text-sm transition ${
                         timeSlot === s.code
-                          ? 'bg-brand-500/15 border-brand-500/40 text-white'
-                          : 'bg-white/[0.02] border-white/10 text-white/60 hover:bg-white/5'
-                      }`}>
+                          ? 'bg-brand-500/20 border-brand-500/60 text-white'
+                          : 'bg-white/[0.05] border-white/15 text-white/70 hover:bg-white/10'
+                      }`}
+                    >
                       <div>{s.label}</div>
                       <div className="text-[10px] text-white/40 mt-0.5">{s.hint}</div>
                     </button>
@@ -251,12 +296,15 @@ export default function QueueJoinWidget() {
                 <label className="input-label">Любимые темы (помогут с подбором вопросов)</label>
                 <div className="flex flex-wrap gap-1.5">
                   {THEMES.map(t => (
-                    <button key={t.code} onClick={() => toggle(themes, t.code, setThemes)}
+                    <button
+                      key={t.code}
+                      onClick={() => toggle(themes, t.code, setThemes)}
                       className={`px-3 py-1.5 rounded-xl border text-xs transition ${
                         themes.has(t.code)
-                          ? 'bg-accent-500/15 border-accent-500/40 text-accent-300'
-                          : 'bg-white/[0.02] border-white/10 text-white/60 hover:bg-white/5'
-                      }`}>
+                          ? 'bg-accent-500/20 border-accent-500/60 text-accent-200'
+                          : 'bg-white/[0.05] border-white/15 text-white/70 hover:bg-white/10'
+                      }`}
+                    >
                       <span className="mr-1">{t.emoji}</span>{t.label}
                     </button>
                   ))}
@@ -265,9 +313,16 @@ export default function QueueJoinWidget() {
 
               {/* Comment */}
               <div>
-                <label className="input-label">Комментарий <span className="text-white/30 font-normal">(необязательно)</span></label>
-                <textarea value={comment} onChange={e => setComment(e.target.value.slice(0, 500))}
-                  rows={2} placeholder="Например: «хочу командно с друзьями»" className="input-field resize-y min-h-[60px]" />
+                <label className="input-label">
+                  Комментарий <span className="text-white/30 font-normal">(необязательно)</span>
+                </label>
+                <textarea
+                  value={comment}
+                  onChange={e => setComment(e.target.value.slice(0, 500))}
+                  rows={2}
+                  placeholder="Например: «хочу командно с друзьями»"
+                  className="input-field resize-y min-h-[60px]"
+                />
                 <div className="text-[10px] text-white/30 mt-1 text-right">{comment.length} / 500</div>
               </div>
 
@@ -277,7 +332,11 @@ export default function QueueJoinWidget() {
                 </div>
               )}
 
-              <button onClick={submit} disabled={submitting} className="btn-primary w-full text-center">
+              <button
+                onClick={submit}
+                disabled={submitting || availableLangs.length === 0}
+                className="btn-primary w-full text-center"
+              >
                 {submitting ? 'Сохраняем...' : 'Записаться в очередь'}
               </button>
               <p className="text-[11px] text-white/30 text-center">
@@ -287,7 +346,7 @@ export default function QueueJoinWidget() {
           </div>
         </div>
       )}
-    </section>
+    </>
   );
 }
 
