@@ -59,6 +59,14 @@ export default function WatchPage() {
     } catch {}
   };
 
+  // Tournament just started — refresh live state immediately so spectator transitions
+  // from "waiting" UI to live question without waiting for the next 4-second poll tick.
+  useEffect(() => {
+    if (ws.tournamentStarted) {
+      loadLiveState();
+    }
+  }, [ws.tournamentStarted]);
+
   // Load reactions when question changes
   useEffect(() => {
     if (ws.question && liveState) {

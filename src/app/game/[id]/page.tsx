@@ -68,6 +68,17 @@ export default function GamePage() {
     }
   }, [ws.tournamentFinished, showFinishedOverlay]);
 
+  // Tournament just started — push the local tournament state from SCHEDULED → LIVE
+  // and restore the live game state so the player sees the first question
+  // without having to refresh the page manually.
+  useEffect(() => {
+    if (ws.tournamentStarted && tournament && tournament.status !== 'LIVE') {
+      loadTournament();
+      // re-run state restore so we pick up the current question if one is already running
+      setStateLoaded(false);
+    }
+  }, [ws.tournamentStarted]);
+
   // Load tournament + restore game state on mount
   useEffect(() => { loadTournament(); }, []);
   useEffect(() => {
