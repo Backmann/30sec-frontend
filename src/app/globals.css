@@ -239,3 +239,14 @@
 .animate-firework {
   animation: firework 2s ease-out infinite;
 }
+
+/* ─── Premium "correct answer" celebration bounce ─── */
+@keyframes bounce-once {
+  0%   { opacity: 0; transform: scale(0.3) rotate(-8deg); }
+  40%  { opacity: 1; transform: scale(1.25) rotate(4deg); }
+  70%  { transform: scale(0.92) rotate(-2deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+.animate-bounce-once {
+  animation: bounce-once 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}

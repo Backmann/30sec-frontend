@@ -150,6 +150,16 @@ export default function AdminLivePage() {
     return () => clearInterval(interval);
   }, [state?.phase]);
 
+  // ═══ Tick every second for live UI counters (e.g. "until tournament starts").
+  // Independent from fetchState — this only forces a re-render so Date.now() based
+  // values update in real time, even before the tournament has gone LIVE.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!state || state.tournament.status !== 'SCHEDULED' && state.tournament.status !== 'DRAFT') return;
+    const iv = setInterval(() => setTick(t => t + 1), 1000);
+    return () => clearInterval(iv);
+  }, [state?.tournament?.status]);
+
   // ═══ Sound triggers on state changes ═══
   useEffect(() => {
     if (!state) return;
@@ -627,6 +637,26 @@ export default function AdminLivePage() {
                 <div className="text-white/40 text-sm mt-2">
                   {allJudged ? 'Все ответы оценены' : `${currentAnswers.filter((a: any) => !a.judged).length} ждут решения`}
                 </div>
+                {allJudged && canLaunchNext && (
+                  <button
+                    onClick={doLaunchQuestion}
+                    disabled={busy === 'launch'}
+                    className="btn-primary mt-6 text-lg px-8"
+                    title="Можно нажать пробел"
+                  >
+                    ▶ Следующий вопрос {progress.currentQuestionNumber + 1}
+                    <span className="ml-2 text-xs opacity-70 font-normal hidden sm:inline">(или Space)</span>
+                  </button>
+                )}
+                {allJudged && progress.remainingQuestions === 0 && (
+                  <button
+                    onClick={doFinish}
+                    disabled={busy === 'finish'}
+                    className="btn-primary mt-6 text-lg px-8 bg-accent-500/20 border-accent-500/40 text-accent-400 hover:bg-accent-500/30"
+                  >
+                    🏁 Завершить турнир
+                  </button>
+                )}
               </>
             )}
             {phase === 'idle' && tournament.status === 'LIVE' && (

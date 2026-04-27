@@ -42,6 +42,15 @@ export default function WatchPage() {
 
   const ws = useSocket({ tournamentId, token });
 
+  // Tournament-finished overlay: when the admin closes the tournament early,
+  // immediately notify spectators instead of leaving them on a stale screen.
+  const [showFinishedOverlay, setShowFinishedOverlay] = useState(false);
+  useEffect(() => {
+    if (ws.tournamentFinished && !showFinishedOverlay) {
+      setShowFinishedOverlay(true);
+    }
+  }, [ws.tournamentFinished, showFinishedOverlay]);
+
   // Load live state from API
   const loadLiveState = async () => {
     try {
@@ -383,6 +392,33 @@ export default function WatchPage() {
           </div>
         </div>
       </main>
+
+      {/* Tournament-ended overlay (when admin closes the tournament early). */}
+      {showFinishedOverlay && (
+        <div className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-dark-800 border border-white/10 rounded-3xl max-w-md w-full p-8 text-center animate-slide-up">
+            <div className="text-6xl mb-4">🏁</div>
+            <h2 className="text-2xl font-black text-white mb-2">Турнир завершён</h2>
+            <p className="text-white/50 text-sm mb-6">
+              Спасибо что были с нами!
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => setShowFinishedOverlay(false)}
+                className="btn-primary w-full"
+              >
+                Посмотреть итоги
+              </button>
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="btn-ghost w-full"
+              >
+                На главную
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

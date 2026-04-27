@@ -58,6 +58,16 @@ export default function GamePage() {
 
   const ws = useSocket({ tournamentId, token });
 
+  // Tournament-finished overlay: when admin ends tournament early (or it ends naturally),
+  // immediately show a full-screen "Tournament finished" notice instead of leaving
+  // the player frozen on the last question / waiting screen.
+  const [showFinishedOverlay, setShowFinishedOverlay] = useState(false);
+  useEffect(() => {
+    if (ws.tournamentFinished && !showFinishedOverlay) {
+      setShowFinishedOverlay(true);
+    }
+  }, [ws.tournamentFinished, showFinishedOverlay]);
+
   // Load tournament + restore game state on mount
   useEffect(() => { loadTournament(); }, []);
   useEffect(() => {
@@ -369,31 +379,70 @@ export default function GamePage() {
           </div>
         )}
 
-        {/* Judgement result */}
+        {/* Judgement result — premium reveal */}
         {isLive && isPlaying && !matchOver && myJudgement && (
-          <div className="card-glow mb-6 text-center py-10 animate-slide-up">
-            {questionData && <p className="text-white/30 text-xs mb-4">{t.game.question} #{(questionData.index ?? 0) + 1}</p>}
-            <div className="text-6xl mb-4">{myJudgement.decision === 'ACCEPTED' ? '✅' : '❌'}</div>
-            <div className={`text-2xl font-black mb-2 ${myJudgement.decision === 'ACCEPTED' ? 'text-green-400' : 'text-red-400'}`}>
-              {myJudgement.decision === 'ACCEPTED' ? t.game.correct : t.game.wrong}
-            </div>
-            <div className="mt-4 space-y-2">
-              <div className="text-white/40 text-sm">Your answer: <span className="text-white font-semibold">{answer.trim() || '(no answer)'}</span></div>
-              {myJudgement.correctAnswer && <div className="text-white/40 text-sm">Correct answer: <span className="text-green-400 font-semibold">{myJudgement.correctAnswer}</span></div>}
+          <div
+            className={`relative overflow-hidden mb-6 text-center py-12 animate-slide-up rounded-3xl border ${
+              myJudgement.decision === 'ACCEPTED'
+                ? 'bg-gradient-to-br from-green-500/[0.08] via-emerald-500/[0.04] to-transparent border-green-500/20'
+                : 'bg-gradient-to-br from-amber-500/[0.04] via-rose-500/[0.03] to-transparent border-white/[0.08]'
+            }`}
+          >
+            {/* Decorative accent ring */}
+            <div
+              className={`absolute -inset-px rounded-3xl pointer-events-none ${
+                myJudgement.decision === 'ACCEPTED'
+                  ? 'shadow-[0_0_60px_-15px_rgba(34,197,94,0.4)_inset]'
+                  : ''
+              }`}
+            />
+            {questionData && <p className="relative text-white/30 text-xs mb-4">{t.game.question} #{(questionData.index ?? 0) + 1}</p>}
+
+            {myJudgement.decision === 'ACCEPTED' ? (
+              <div className="relative">
+                <div className="text-7xl mb-4 animate-bounce-once">🎯</div>
+                <div className="text-3xl font-black mb-1 bg-gradient-to-r from-green-300 via-emerald-400 to-green-300 bg-clip-text text-transparent">
+                  {t.game.correct}
+                </div>
+                <div className="text-green-400/60 text-xs uppercase tracking-[0.2em] font-semibold">
+                  ★ верный ответ ★
+                </div>
+              </div>
+            ) : (
+              <div className="relative">
+                <div className="text-5xl mb-4 opacity-80">💡</div>
+                <div className="text-2xl font-bold mb-1 text-white/90">
+                  Не в этот раз
+                </div>
+                <div className="text-white/40 text-xs">
+                  Следующий вопрос — твой шанс
+                </div>
+              </div>
+            )}
+
+            <div className="relative mt-6 space-y-2">
+              <div className="text-white/40 text-sm">
+                Ваш ответ: <span className="text-white font-semibold">{answer.trim() || '(нет ответа)'}</span>
+              </div>
+              {myJudgement.correctAnswer && (
+                <div className="text-white/40 text-sm">
+                  Правильный ответ: <span className={myJudgement.decision === 'ACCEPTED' ? 'text-green-300 font-semibold' : 'text-amber-300 font-semibold'}>{myJudgement.correctAnswer}</span>
+                </div>
+              )}
               {answerImagesForReveal.length > 0 && (
                 <div className={`grid gap-2 mt-4 ${answerImagesForReveal.length === 1 ? 'grid-cols-1' : answerImagesForReveal.length <= 4 ? 'grid-cols-2' : 'grid-cols-3'}`}>
                   {answerImagesForReveal.map((img: any, i: number) => (
                     <div key={img.id || i} className="space-y-1">
-                      <img src={img.url} alt="" className="w-full aspect-video object-cover rounded-xl border border-green-500/30" />
+                      <img src={img.url} alt="" className="w-full aspect-video object-cover rounded-xl border border-white/10" />
                       {img.caption && <div className="text-white/60 text-xs">{img.caption}</div>}
                     </div>
                   ))}
                 </div>
               )}
             </div>
-            <div className="mt-6 text-white/20 text-xs">
+            <div className="relative mt-6 text-white/20 text-xs">
               <div className="flex justify-center mt-3"><div className="w-5 h-5 border-2 border-white/20 border-t-transparent rounded-full animate-spin" /></div>
-              <p className="mt-2">Next question...</p>
+              <p className="mt-2">Следующий вопрос...</p>
             </div>
           </div>
         )}
@@ -428,6 +477,33 @@ export default function GamePage() {
       </main>
       {lightboxOpen && ws.question?.questionImages && (
         <ImageLightbox images={ws.question.questionImages} startIndex={lightboxStart} onClose={() => setLightboxOpen(false)} />
+      )}
+
+      {/* Tournament-ended overlay (admin closed the tournament early or it ended). */}
+      {showFinishedOverlay && (
+        <div className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-dark-800 border border-white/10 rounded-3xl max-w-md w-full p-8 text-center animate-slide-up">
+            <div className="text-6xl mb-4">🏁</div>
+            <h2 className="text-2xl font-black text-white mb-2">Турнир завершён</h2>
+            <p className="text-white/50 text-sm mb-6">
+              Ведущий завершил турнир. Спасибо за игру!
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => router.push(`/watch/${tournamentId}`)}
+                className="btn-primary w-full"
+              >
+                Посмотреть результаты
+              </button>
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="btn-ghost w-full"
+              >
+                На главную
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
