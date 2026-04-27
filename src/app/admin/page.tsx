@@ -11,8 +11,9 @@ import PlayersTab from '@/components/PlayersTab';
 import FeedbackTab from '@/components/FeedbackTab';
 import HealthTab from '@/components/HealthTab';
 import QueueAdminTab from '@/components/QueueAdminTab';
+import QuestionLibraryTab from '@/components/QuestionLibraryTab';
 
-type Tab = 'dashboard' | 'tournaments' | 'questions' | 'users' | 'queue' | 'feedback' | 'health' | 'logs';
+type Tab = 'dashboard' | 'tournaments' | 'questions' | 'library' | 'users' | 'queue' | 'feedback' | 'health' | 'logs';
 const RQ = 23;
 
 export default function AdminPage() {
@@ -401,7 +402,7 @@ export default function AdminPage() {
   const wk = new Date(Date.now()-7*86400000).toISOString();
   const active = tournaments.filter(t => ['LIVE','SCHEDULED','DRAFT'].includes(t.status));
   const fin = tournaments.filter(t => { if (t.status !== 'FINISHED') return false; const d = t.endAt || t.createdAt; if (fFrom && new Date(d)<new Date(fFrom)) return false; if (fTo && new Date(d)>new Date(fTo+'T23:59:59')) return false; if (!fFrom && !fTo) return new Date(d)>new Date(wk); return true; });
-  const tabs: {id:Tab;icon:string;label:string}[] = [{id:'dashboard',icon:'D',label:'Дашборд'},{id:'tournaments',icon:'T',label:'Турниры'},{id:'questions',icon:'Q',label:'Вопросы'},{id:'users',icon:'U',label:'Игроки'},{id:'queue',icon:'📅',label:'Очередь'},{id:'feedback',icon:'F',label:'Обратная связь'},{id:'health',icon:'H',label:'Здоровье'},{id:'logs',icon:'L',label:'Журнал'}];
+  const tabs: {id:Tab;icon:string;label:string}[] = [{id:'dashboard',icon:'D',label:'Дашборд'},{id:'tournaments',icon:'T',label:'Турниры'},{id:'questions',icon:'Q',label:'Вопросы'},{id:'library',icon:'📚',label:'Библиотека'},{id:'users',icon:'U',label:'Игроки'},{id:'queue',icon:'📅',label:'Очередь'},{id:'feedback',icon:'F',label:'Обратная связь'},{id:'health',icon:'H',label:'Здоровье'},{id:'logs',icon:'L',label:'Журнал'}];
   const qc = (t: any) => t.tournamentQuestions?.length || 0;
   const qr = (t: any) => qc(t) >= RQ;
   const apprd = (t: any) => (t.participants || []).filter((p: any) => p.matchStatus === 'APPROVED' || p.matchStatus === 'PLAYING').length;
@@ -795,6 +796,7 @@ export default function AdminPage() {
           })()}
 
           {tab==='users' && <PlayersTab />}
+          {tab==='library' && <QuestionLibraryTab />}
           {tab==='queue' && <QueueAdminTab />}
           {tab==='feedback' && <FeedbackTab />}
           {tab==='health' && <HealthTab />}

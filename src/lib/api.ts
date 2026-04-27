@@ -537,6 +537,11 @@ class ApiClient {
       body: JSON.stringify({ tournamentId, requestIds }),
     });
   }
+
+  // ─── Question Library Overview ────────────────
+  async getQuestionLibraryOverview(referenceLang: string = 'ru') {
+    return this.request<any>(`/questions/library-overview?referenceLang=${encodeURIComponent(referenceLang)}`);
+  }
 }
 
 export class ApiError extends Error {
