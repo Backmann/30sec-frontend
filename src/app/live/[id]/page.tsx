@@ -153,8 +153,18 @@ export default function PublicLivePage() {
 
           {/* Timer + question */}
           <div className="flex-1 flex flex-col items-center justify-center">
-            {(phase === 'reading' || phase === 'answering') && (
-              <div className={`${projectorMode ? 'text-[280px]' : 'text-[200px]'} font-black font-mono leading-none mb-8 ${ps.color} ${timerSeconds <= 5 && phase === 'answering' ? 'animate-pulse' : ''}`}>
+            {/* Reading phase: no countdown number on stream — viewers don't need to feel
+                pressure during the question read. We show a soft, paced indicator instead. */}
+            {phase === 'reading' && (
+              <div className={`${projectorMode ? 'mb-12' : 'mb-8'} flex flex-col items-center`}>
+                <div className={`${projectorMode ? 'text-9xl' : 'text-7xl'} mb-4`}>📖</div>
+                <div className={`${projectorMode ? 'text-4xl' : 'text-2xl'} ${ps.color} font-semibold tracking-wide`}>
+                  Чтение вопроса
+                </div>
+              </div>
+            )}
+            {phase === 'answering' && (
+              <div className={`${projectorMode ? 'text-[280px]' : 'text-[200px]'} font-black font-mono leading-none mb-8 ${ps.color} ${timerSeconds <= 5 ? 'animate-pulse' : ''}`}>
                 {timerSeconds}
               </div>
             )}
