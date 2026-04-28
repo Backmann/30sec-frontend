@@ -31,7 +31,7 @@ type Tournament = {
   participants?: Participant[];
 };
 
-type User = { id: string; role?: string };
+type User = { id: string; role?: string; emailVerifiedAt?: string | null };
 
 interface Props {
   tr: Tournament;
@@ -191,6 +191,31 @@ export default function TournamentCardCTA({ tr, user, onApply, compact = false }
 
   // ───── SCHEDULED / DRAFT ─────
   if (!my) {
+    // Logged in but email not yet verified — apply API will reject (EmailVerifiedGuard).
+    // Show a clear info state instead of a button that just fails on click.
+    if (user && !user.emailVerifiedAt) {
+      return (
+        <div className="space-y-2">
+          <div className="w-full text-center text-sm bg-amber-500/10 border border-amber-500/20 rounded-2xl py-3 text-amber-300">
+            ✉ Подтверди email чтобы играть
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={(e) => { e.stopPropagation(); router.push('/profile'); }}
+              className="btn-primary text-center text-xs py-2.5"
+            >
+              Подтвердить email
+            </button>
+            <button
+              onClick={goWatch}
+              className="btn-secondary text-center text-xs py-2.5"
+            >
+              Смотреть когда начнётся
+            </button>
+          </div>
+        </div>
+      );
+    }
     return (
       <button
         onClick={(e) => { e.stopPropagation(); onApply?.(tr.id); }}
