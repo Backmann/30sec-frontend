@@ -14,6 +14,82 @@ const REACTIONS = [
   { code: 'wow', emoji: '😮' },
 ];
 
+function pluralRu(n: number, forms: [string, string, string]): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 14) return forms[2];
+  if (mod10 === 1) return forms[0];
+  if (mod10 >= 2 && mod10 <= 4) return forms[1];
+  return forms[2];
+}
+
+/** Share menu — TG / WhatsApp / X / Copy link. Native API on mobile when available. */
+function ShareButton({ title }: { title: string }) {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const url = typeof window !== 'undefined' ? window.location.href : '';
+  const shareText = `Смотрю интеллектуальный турнир «${title}» на 30sec.org`;
+
+  const native = () => {
+    if (navigator.share) {
+      navigator.share({ title, text: shareText, url }).catch(() => {});
+    } else {
+      setOpen(o => !o);
+    }
+  };
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => { setCopied(false); setOpen(false); }, 1200);
+    } catch {}
+  };
+
+  const tgUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(shareText)}`;
+  const waUrl = `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + url)}`;
+  const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(url)}`;
+
+  return (
+    <div className="relative">
+      <button
+        onClick={native}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/10 hover:bg-white/[0.08] hover:border-white/20 transition text-xs text-white/70 hover:text-white"
+        aria-label="Поделиться"
+      >
+        <span>↗</span>
+        <span>Поделиться</span>
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-2 z-50 bg-dark-800 border border-white/10 rounded-2xl shadow-xl p-1.5 min-w-[180px] animate-fade-in">
+            <a href={tgUrl} target="_blank" rel="noopener noreferrer"
+               className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-white/80 hover:bg-white/5">
+              <span className="text-base">✈️</span> Telegram
+            </a>
+            <a href={waUrl} target="_blank" rel="noopener noreferrer"
+               className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-white/80 hover:bg-white/5">
+              <span className="text-base">💬</span> WhatsApp
+            </a>
+            <a href={xUrl} target="_blank" rel="noopener noreferrer"
+               className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-white/80 hover:bg-white/5">
+              <span className="text-base">𝕏</span> X / Twitter
+            </a>
+            <div className="h-px bg-white/[0.06] my-1" />
+            <button onClick={copy}
+              className="w-full text-left flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-white/80 hover:bg-white/5">
+              <span className="text-base">{copied ? '✓' : '🔗'}</span>
+              {copied ? 'Скопировано!' : 'Скопировать ссылку'}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function WatchPage() {
   const params = useParams();
   const tournamentId = params.id as string;
@@ -186,18 +262,25 @@ export default function WatchPage() {
           {/* Left column — main content */}
           <div className="lg:col-span-2 space-y-5">
 
-            {/* Tournament info bar */}
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-4 text-white/30">
-                <span>👥 {liveState?.playersCount || 0} players</span>
-                <span>📝 {liveState?.questionsProgress?.used || 0}/{liveState?.questionsProgress?.total || 0} questions</span>
+            {/* Tournament info bar — premium row with social proof + share */}
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-4 text-sm">
+                <span className="inline-flex items-center gap-1.5 text-white/40">
+                  <span className="text-base">👥</span>
+                  <span><span className="text-white/70 font-semibold">{liveState?.playersCount || 0}</span> игроков</span>
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-white/40">
+                  <span className="text-base">📝</span>
+                  <span><span className="text-white/70 font-semibold">{liveState?.questionsProgress?.used || 0}</span>/{liveState?.questionsProgress?.total || 0}</span>
+                </span>
+                {liveState?.spectatorCount > 0 && (
+                  <span className="inline-flex items-center gap-1.5 text-white/40">
+                    <span className="text-base">👁</span>
+                    <span><span className="text-emerald-400 font-semibold">{liveState.spectatorCount}</span> {pluralRu(liveState.spectatorCount, ['зритель','зрителя','зрителей'])}</span>
+                  </span>
+                )}
               </div>
-              {liveState?.status === 'LIVE' && (
-                <div className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-                  <span className="text-red-400 text-xs font-semibold">LIVE</span>
-                </div>
-              )}
+              <ShareButton title={liveState?.title || 'Турнир 30sec'} />
             </div>
 
             {/* Question card */}
@@ -385,16 +468,27 @@ export default function WatchPage() {
               </div>
             </div>
 
-            {/* How to play hint */}
+            {/* CTA for unauthenticated viewers — convert spectator → player */}
             {!user && (
-              <div className="card bg-brand-500/5 border-brand-500/10">
-                <p className="text-brand-400/80 text-sm">
-                  Войдите, чтобы сохранять свои ответы и ставить реакции
-                </p>
-                <button onClick={() => router.push('/auth/login')}
-                  className="btn-primary text-xs px-4 py-2 mt-3 w-full text-center">
-                  Войти →
-                </button>
+              <div className="relative overflow-hidden rounded-2xl border border-brand-500/30 bg-gradient-to-br from-brand-500/[0.12] via-brand-500/[0.06] to-transparent p-5">
+                <div className="absolute -top-12 -right-12 w-40 h-40 bg-brand-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="relative">
+                  <div className="text-2xl mb-2">🎯</div>
+                  <h4 className="text-white font-bold text-base mb-1">Сыграй сам в следующем</h4>
+                  <p className="text-white/50 text-xs leading-relaxed mb-4">
+                    Регистрация бесплатная. Подавай заявку на турнир, получай очки рейтинга и ставь реакции на вопросы.
+                  </p>
+                  <div className="flex gap-2">
+                    <button onClick={() => router.push('/auth/register')}
+                      className="btn-primary text-sm px-4 py-2 flex-1">
+                      Создать аккаунт
+                    </button>
+                    <button onClick={() => router.push('/auth/login')}
+                      className="btn-ghost text-sm px-4 py-2">
+                      Войти
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>
