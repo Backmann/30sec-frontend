@@ -91,7 +91,21 @@ export default function DashboardPage() {
 
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8 animate-fade-in"><div><h2 className="text-2xl sm:text-3xl font-display font-bold text-white">{t.home.welcome}, <span className="text-brand-400">{user.profile?.nickname}</span></h2><p className="text-white/30 mt-1 text-sm">{t.home.subtitle}</p></div>{!isAdmin && ps && ps.totalAnswered > 0 && <div className="flex gap-4">{[{v:ps.totalCorrect,l:'✓',c:'text-green-400'},{v:`${ps.accuracyPercent}%`,l:'ACC',c:'text-brand-400'},{v:ps.bestStreak,l:'🔥',c:'text-accent-400'}].map((s,i)=><div key={i} className="text-center px-3 py-2 rounded-2xl bg-white/[0.03] border border-white/[0.06]"><div className={`text-lg font-bold font-mono ${s.c}`}>{s.v}</div><div className="text-[10px] text-white/30">{s.l}</div></div>)}</div>}</div>
 
-        {!isAdmin && <QueueJoinWidget />}
+        {live.length > 0 && <section className="mb-10 animate-slide-up" style={{animationDelay:'0.03s',animationFillMode:'both'}}><h3 className="section-title mb-4"><span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" /> Live</h3><div className="grid gap-4 sm:grid-cols-2">{live.map(tr => (
+          <div key={tr.id} className="card-glow group">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h4 className="text-white font-bold text-lg">{tr.title}</h4>
+                <div className="flex gap-3 text-white/30 text-sm mt-1">
+                  <span>{tr._count?.participants || 0} players</span>
+                  <span>{tr.type}</span>
+                </div>
+              </div>
+              <span className="badge-live">LIVE</span>
+            </div>
+            <TournamentCardCTA tr={tr} user={user} />
+          </div>
+        ))}</div></section>}
 
         {upcoming.length > 0 && <section className="mb-10 animate-slide-up" style={{animationDelay:'0.05s',animationFillMode:'both'}}><h3 className="section-title mb-4"><span className="text-accent-400">⏳</span> Предстоящие турниры</h3><div className="grid gap-4 sm:grid-cols-2">{upcoming.map(tr => (
           <div key={tr.id} className="card-glow">
@@ -113,21 +127,7 @@ export default function DashboardPage() {
           </div>
         ))}</div></section>}
 
-        {live.length > 0 && <section className="mb-10 animate-slide-up" style={{animationDelay:'0.1s',animationFillMode:'both'}}><h3 className="section-title mb-4"><span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" /> Live</h3><div className="grid gap-4 sm:grid-cols-2">{live.map(tr => (
-          <div key={tr.id} className="card-glow group">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h4 className="text-white font-bold text-lg">{tr.title}</h4>
-                <div className="flex gap-3 text-white/30 text-sm mt-1">
-                  <span>{tr._count?.participants || 0} players</span>
-                  <span>{tr.type}</span>
-                </div>
-              </div>
-              <span className="badge-live">LIVE</span>
-            </div>
-            <TournamentCardCTA tr={tr} user={user} />
-          </div>
-        ))}</div></section>}
+        {!isAdmin && <QueueJoinWidget />}
 
         <section className="animate-slide-up" style={{animationDelay:'0.2s',animationFillMode:'both'}}><h3 className="section-title mb-4">Завершённые (последняя неделя)</h3>{recent.length === 0 ? <div className="card text-center py-12"><div className="text-4xl mb-3 opacity-20">🏆</div><p className="text-white/30 text-sm">Нет завершённых турниров</p></div> : <div className="space-y-2">{recent.map(tr => <div key={tr.id} className="card-hover flex items-center justify-between"><div className="flex items-center gap-4 flex-1 cursor-pointer" onClick={() => router.push(`/watch/${tr.id}`)}><div className="w-10 h-10 rounded-xl bg-white/[0.04] flex items-center justify-center text-lg shrink-0">🏆</div><div><h4 className="text-white font-medium">{tr.title}</h4><div className="flex gap-2 text-white/30 text-xs mt-0.5"><span>{tr.type}</span><span>{tr._count?.participants||0} players</span></div></div></div><div className="flex items-center gap-2"><button onClick={e => { e.stopPropagation(); router.push(`/vote/${tr.id}`); }} className="px-3 py-1.5 rounded-xl bg-accent-500/10 hover:bg-accent-500/20 text-accent-400 text-xs font-semibold transition">⭐ Лучший вопрос</button><span className="badge-finished">Finished</span></div></div>)}</div>}</section>
       </main>
