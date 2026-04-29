@@ -30,6 +30,13 @@ interface GameState {
     scoreSystem: number;
     matchStatus: string;
   } | null;
+  // Set of userIds who have submitted an answer for the current question.
+  // Used to colour spectator avatars (grey → blue) and to show the player
+  // their own "answer received, waiting for reveal" panel.
+  answeredUserIds: Set<string>;
+  // The synchronized reveal payload — set when the server flushes results
+  // to the whole room. Includes every player's judgement + the correct answer.
+  revealedJudgements: { judgements: any[]; correctAnswer: string } | null;
   tournamentStarted: boolean;
   tournamentFinished: boolean;
   reactions: { questionId: string; reactions: any[] } | null;
@@ -41,6 +48,7 @@ export function useSocket({ tournamentId, token, isAdmin }: UseSocketOptions) {
   const [state, setState] = useState<GameState>({
     question: null, timerSeconds: 30, isLocked: false, phase: 'waiting',
     scores: new Map(), answers: [], lastJudgement: null,
+    answeredUserIds: new Set(), revealedJudgements: null,
     tournamentStarted: false, tournamentFinished: false, reactions: null, connected: false,
   });
 
@@ -73,7 +81,10 @@ export function useSocket({ tournamentId, token, isAdmin }: UseSocketOptions) {
       setState(s => ({
         ...s,
         question: { orderIndex: data.orderIndex, category: data.category, questionId: data.questionId, localizations: data.localizations, questionImages: data.questionImages || [] },
-        timerSeconds: 0, isLocked: false, phase: data.phase || 'reading', answers: [], lastJudgement: null,
+        timerSeconds: 0, isLocked: false, phase: data.phase || 'reading',
+        answers: [], lastJudgement: null,
+        answeredUserIds: new Set(),
+        revealedJudgements: null,
       }));
     });
 
@@ -83,6 +94,17 @@ export function useSocket({ tournamentId, token, isAdmin }: UseSocketOptions) {
 
     socket.on('answer_submitted', (data) => setState(s => ({ ...s, answers: [...s.answers, data] })));
 
+    // Public-room signal: a user submitted an answer (no text). Used to colour
+    // spectator avatars and to show the answering player their pending panel.
+    socket.on('answer_status', (data: { userId: string; answered: boolean }) => {
+      setState(s => {
+        if (!data.answered) return s;
+        const next = new Set(s.answeredUserIds);
+        next.add(data.userId);
+        return { ...s, answeredUserIds: next };
+      });
+    });
+
     socket.on('score_updated', (data) => {
       setState(s => {
         const m = new Map(s.scores);
@@ -91,7 +113,22 @@ export function useSocket({ tournamentId, token, isAdmin }: UseSocketOptions) {
       });
     });
 
+    // judgement_made now arrives only in the admin room — keep handler for admin UI.
     socket.on('judgement_made', (data) => setState(s => ({ ...s, lastJudgement: data })));
+
+    // Synchronized reveal: the server has buffered all judgements and is now
+    // flushing them to the whole room at once. This is when players see their
+    // result. We also project the per-player score into scores Map so the UI
+    // stays consistent with what admin saw earlier.
+    socket.on('judgements_revealed', (payload: { judgements: any[]; correctAnswer: string }) => {
+      setState(s => {
+        const m = new Map(s.scores);
+        for (const j of payload.judgements) {
+          m.set(j.userId, { scoreUser: j.scoreUser, scoreSystem: j.scoreSystem, matchStatus: j.matchStatus });
+        }
+        return { ...s, scores: m, revealedJudgements: payload };
+      });
+    });
 
     socket.on('match_finished', (data) => {
       setState(s => {

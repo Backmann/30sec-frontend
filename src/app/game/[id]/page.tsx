@@ -90,25 +90,31 @@ export default function GamePage() {
 
   useEffect(() => { if (ws.scores.size > 0) loadTournament(); }, [ws.scores]);
 
-  // Handle judgement
+  // Handle synchronized judgement reveal.
+  // After server flushes all results, find ours in the revealed batch.
+  // (Previously this used ws.lastJudgement, which now arrives only in admin
+  // rooms — players see their result only at the synchronized reveal moment.)
   useEffect(() => {
-    if (ws.lastJudgement && user && ws.lastJudgement.userId === user.id) {
-      setMyJudgement(ws.lastJudgement);
-      setParticipant((prev: any) => prev ? {
-        ...prev, currentScoreUser: ws.lastJudgement.scoreUser,
-        currentScoreSystem: ws.lastJudgement.scoreSystem,
-        matchStatus: ws.lastJudgement.matchStatus,
-      } : prev);
-      // Fetch full game state to get answer images (they are revealed after judgement)
-      api.getGameState(tournamentId).then((gs: any) => {
-        if (gs?.currentQuestion?.answerImages) {
-          // Inject into ws.question via a setter trick — but ws is readonly
-          // Workaround: we store answerImages separately
-          setAnswerImagesForReveal(gs.currentQuestion.answerImages);
-        }
-      }).catch(() => {});
+    if (ws.revealedJudgements && user) {
+      const mine = ws.revealedJudgements.judgements.find((j: any) => j.userId === user.id);
+      if (mine) {
+        // Project the correctAnswer from payload (it lives at the top level there)
+        const j = { ...mine, correctAnswer: mine.correctAnswer || ws.revealedJudgements.correctAnswer };
+        setMyJudgement(j);
+        setParticipant((prev: any) => prev ? {
+          ...prev, currentScoreUser: j.scoreUser,
+          currentScoreSystem: j.scoreSystem,
+          matchStatus: j.matchStatus,
+        } : prev);
+        // Fetch full game state to get answer images (revealed after judgement)
+        api.getGameState(tournamentId).then((gs: any) => {
+          if (gs?.currentQuestion?.answerImages) {
+            setAnswerImagesForReveal(gs.currentQuestion.answerImages);
+          }
+        }).catch(() => {});
+      }
     }
-  }, [ws.lastJudgement, user, tournamentId]);
+  }, [ws.revealedJudgements, user, tournamentId]);
 
   // Reset answer images on new question
   useEffect(() => {
@@ -379,11 +385,12 @@ export default function GamePage() {
               </div>
             ) : (
               <div className="text-center py-6">
-                <p className="text-white/50 text-sm mb-2">Your answer:</p>
-                <p className="text-white text-2xl font-bold mb-4">{answer.trim() || '(no answer)'}</p>
-                <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-2xl px-4 py-2">
-                  <div className="w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
-                  <span className="text-amber-400 text-sm">Checking...</span>
+                <div className="text-3xl mb-3">✓</div>
+                <p className="text-white/50 text-sm mb-1">Твой ответ принят</p>
+                <p className="text-white text-2xl font-bold mb-4">{answer.trim() || '(нет ответа)'}</p>
+                <div className="inline-flex items-center gap-2 bg-white/[0.03] border border-white/10 rounded-2xl px-4 py-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-white/60 text-sm">Ждём остальных и раскрытия...</span>
                 </div>
               </div>
             )}
