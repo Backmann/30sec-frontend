@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef, useLayoutEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/store';
 import { api } from '@/lib/api';
@@ -15,6 +15,40 @@ import QuestionLibraryTab from '@/components/QuestionLibraryTab';
 
 type Tab = 'dashboard' | 'tournaments' | 'questions' | 'library' | 'users' | 'queue' | 'feedback' | 'health' | 'logs';
 const RQ = 23;
+
+/**
+ * Single-element textarea that grows to fit its content.
+ * Handles three resize triggers: typing, value-prop change (e.g. when admin
+ * opens an existing question for editing), and initial mount.
+ */
+function AutoTextarea(props: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  className?: string;
+  maxLength?: number;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const resize = () => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  };
+  useLayoutEffect(() => { resize(); }, [props.value]);
+  return (
+    <textarea
+      ref={ref}
+      value={props.value}
+      onChange={(e) => props.onChange(e.target.value)}
+      onInput={resize}
+      rows={1}
+      maxLength={props.maxLength}
+      className={(props.className || '') + ' resize-none overflow-hidden min-h-[44px]'}
+      placeholder={props.placeholder}
+    />
+  );
+}
 
 export default function AdminPage() {
   const router = useRouter();
@@ -584,7 +618,7 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {showQF && <div className="card mb-5 space-y-3 animate-slide-down"><div className="text-sm font-semibold text-white/70 mb-2">{editingQuestionId ? '✏️ Редактирование вопроса' : '➕ Новый вопрос'}</div>{!editingQuestionId && <div><label className="input-label">Турнир (опционально)</label><select value={qF.tid} onChange={e=>setQF({...qF,tid:e.target.value})} className="input-field"><option value="">— не привязывать —</option>{tournaments.filter(t=>t.status!=='FINISHED').map(t=><option key={t.id} value={t.id}>{t.title} ({qc(t)}/{RQ})</option>)}</select></div>}{['ru','de','en'].map(l=><div key={l}><label className="input-label">{l.toUpperCase()}</label><div className="flex gap-2"><input value={(qF as any)[l+'_t']} onChange={e=>setQF({...qF,[l+'_t']:e.target.value})} className="input-field flex-1 text-sm" placeholder={'Вопрос ('+l+')'} /><input value={(qF as any)[l+'_a']} onChange={e=>setQF({...qF,[l+'_a']:e.target.value})} className="input-field w-32 sm:w-40 text-sm" placeholder="Ответ" /></div></div>)}
+            {showQF && <div className="card mb-5 space-y-3 animate-slide-down"><div className="text-sm font-semibold text-white/70 mb-2">{editingQuestionId ? '✏️ Редактирование вопроса' : '➕ Новый вопрос'}</div>{!editingQuestionId && <div><label className="input-label">Турнир (опционально)</label><select value={qF.tid} onChange={e=>setQF({...qF,tid:e.target.value})} className="input-field"><option value="">— не привязывать —</option>{tournaments.filter(t=>t.status!=='FINISHED').map(t=><option key={t.id} value={t.id}>{t.title} ({qc(t)}/{RQ})</option>)}</select></div>}{['ru','de','en'].map(l=><div key={l}><label className="input-label">{l.toUpperCase()}</label><div className="flex flex-col sm:flex-row gap-2"><AutoTextarea value={(qF as any)[l+'_t']} onChange={v=>setQF({...qF,[l+'_t']:v})} className="input-field flex-1 text-sm" placeholder={'Вопрос ('+l+')'} /><AutoTextarea value={(qF as any)[l+'_a']} onChange={v=>setQF({...qF,[l+'_a']:v})} className="input-field sm:w-40 text-sm" placeholder="Ответ" /></div></div>)}
               <div className="pt-2 border-t border-white/[0.06]"><ImageUploader images={qfQuestionImages} onChange={setQfQuestionImages} category="question" label="🖼 Изображения к вопросу (до 10)" /></div>
               <div className="pt-2"><ImageUploader images={qfAnswerImages} onChange={setQfAnswerImages} category="answer" label="🎯 Изображения к правильному ответу (до 10)" /></div>
               <div className="flex gap-2 pt-2"><button onClick={doCreateQ} className="btn-primary text-sm">{editingQuestionId ? 'Сохранить' : 'Создать'}</button><button onClick={()=>{ setShowQF(false); setEditingQuestionId(null); setQfQuestionImages([]); setQfAnswerImages([]); }} className="btn-ghost text-sm">Отмена</button></div></div>}

@@ -30,6 +30,11 @@ export default function WatchPage() {
   const [reactionCounts, setReactionCounts] = useState<{ code: string; count: number }[]>([]);
   const [currentQuestionId, setCurrentQuestionId] = useState<string | null>(null);
 
+  // After admin's synchronized reveal, briefly show correct answer to spectator
+  // — same fairness moment as players. Auto-hides after 7 seconds so it doesn't
+  // linger into the next question's reading phase.
+  const [revealedAnswer, setRevealedAnswer] = useState<string | null>(null);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setToken(localStorage.getItem('accessToken'));
@@ -66,6 +71,22 @@ export default function WatchPage() {
       loadLiveState();
     }
   }, [ws.tournamentStarted]);
+
+  // Synchronized reveal arrives — pull the correct answer out of the payload
+  // and show it to the spectator for 7 seconds. Same content moment players
+  // see, so spectators stay in sync with the room.
+  useEffect(() => {
+    if (ws.revealedJudgements?.correctAnswer) {
+      setRevealedAnswer(ws.revealedJudgements.correctAnswer);
+      const timeout = setTimeout(() => setRevealedAnswer(null), 7000);
+      return () => clearTimeout(timeout);
+    }
+  }, [ws.revealedJudgements]);
+
+  // Reset the reveal banner when the next question starts
+  useEffect(() => {
+    if (ws.question?.questionId) setRevealedAnswer(null);
+  }, [ws.question?.questionId]);
 
   // Load reactions when question changes
   useEffect(() => {
@@ -262,6 +283,21 @@ export default function WatchPage() {
                 {isLocked && !myAnswerSaved && (
                   <div className="bg-white/[0.03] rounded-2xl p-3 text-center">
                     <span className="text-white/30 text-sm">Время вышло</span>
+                  </div>
+                )}
+
+                {/* Synchronized correct-answer reveal — spectator sees this at the
+                    SAME moment players see their pass/fail card. 7 seconds visibility. */}
+                {revealedAnswer && (
+                  <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/[0.10] via-emerald-500/[0.04] to-transparent p-4 text-center animate-fade-in">
+                    <div className="text-2xl mb-1">🎯</div>
+                    <div className="text-[10px] uppercase tracking-[0.2em] text-emerald-300/70 mb-1">Правильный ответ</div>
+                    <div className="text-lg font-bold text-white">{revealedAnswer}</div>
+                    {myAnswerSaved && myAnswer && (
+                      <div className="text-[11px] text-white/40 mt-2">
+                        Ваш ответ был: <span className="text-white/70">{myAnswer}</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
