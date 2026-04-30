@@ -37,7 +37,6 @@ export default function Home() {
   const router = useRouter();
   const { user, loadUser } = useAuth();
   const [locale, setLocale] = useState<Locale>('ru');
-  const [mounted, setMounted] = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
   // Refs to background glow layers — direct DOM update on mousemove avoids
   // a React re-render of the whole homepage 60+ times per second, which
@@ -47,8 +46,17 @@ export default function Home() {
   const glow2Ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Disable browser scroll restoration on this landing page. Chrome
+    // remembers the scroll position from a previous visit and silently
+    // re-applies it after the document grows on hydration — for a *first*
+    // visit that's a confusing jump-down ("page scrolled itself to the
+    // second screen as soon as I touched it"). On a marketing landing
+    // we always want to start at the top.
+    if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+      window.scrollTo(0, 0);
+    }
     setLocale(detectLocale());
-    setMounted(true);
     loadUser();
   }, []);
 
@@ -97,8 +105,6 @@ export default function Home() {
     document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  if (!mounted) return null;
-
   return (
     <div className="min-h-screen flex flex-col relative">
       {/* Background layers */}
@@ -128,7 +134,7 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-2">
-          {(['en', 'de', 'ru'] as const).map((lang) => (
+          {(['ru', 'de', 'en'] as const).map((lang) => (
             <button
               key={lang}
               onClick={() => switchLocale(lang)}
