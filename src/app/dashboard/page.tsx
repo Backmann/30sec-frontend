@@ -3,21 +3,68 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/store';
 import { api } from '@/lib/api';
-import { detectLocale, getTranslation } from '@/lib/i18n';
+import { detectLocale, getTranslation, Locale } from '@/lib/i18n';
 import NotificationBell from '@/components/NotificationBell';
 import QueueJoinWidget from '@/components/QueueJoinWidget';
 import TournamentCardCTA from '@/components/TournamentCardCTA';
 
-function Countdown({ target }: { target: string }) {
+const D_STR: Record<Locale, {
+  startsNow: string;
+  d: string; h: string; m: string; s: string;
+  verifyEmailTitle: string;
+  beforeStart: string;
+  finishedThisWeek: string;
+  noFinished: string;
+  bestQuestion: string;
+  players: string;
+  finished: string;
+}> = {
+  ru: {
+    startsNow: 'Готов к старту!',
+    d: 'дн', h: 'час', m: 'мин', s: 'сек',
+    verifyEmailTitle: 'Подтвердите email',
+    beforeStart: 'До начала:',
+    finishedThisWeek: 'Завершённые (последняя неделя)',
+    noFinished: 'Нет завершённых турниров',
+    bestQuestion: '⭐ Лучший вопрос',
+    players: 'игроков',
+    finished: 'Завершён',
+  },
+  en: {
+    startsNow: 'Ready to start!',
+    d: 'd', h: 'h', m: 'min', s: 'sec',
+    verifyEmailTitle: 'Verify your email',
+    beforeStart: 'Starts in:',
+    finishedThisWeek: 'Finished (this week)',
+    noFinished: 'No finished tournaments',
+    bestQuestion: '⭐ Best question',
+    players: 'players',
+    finished: 'Finished',
+  },
+  de: {
+    startsNow: 'Bereit zum Start!',
+    d: 'T', h: 'Std', m: 'Min', s: 'Sek',
+    verifyEmailTitle: 'E-Mail bestätigen',
+    beforeStart: 'Beginnt in:',
+    finishedThisWeek: 'Beendet (diese Woche)',
+    noFinished: 'Keine beendeten Turniere',
+    bestQuestion: '⭐ Beste Frage',
+    players: 'Spieler',
+    finished: 'Beendet',
+  },
+};
+
+function Countdown({ target, locale }: { target: string; locale: Locale }) {
+  const ds = D_STR[locale];
   const [diff, setDiff] = useState(0);
   useEffect(() => { const calc = () => setDiff(Math.max(0, new Date(target).getTime() - Date.now())); calc(); const iv = setInterval(calc, 1000); return () => clearInterval(iv); }, [target]);
-  if (diff <= 0) return <span className="text-green-400 text-sm font-semibold animate-pulse">Готов к старту!</span>;
+  if (diff <= 0) return <span className="text-green-400 text-sm font-semibold animate-pulse">{ds.startsNow}</span>;
   const d = Math.floor(diff / 86400000), h = Math.floor((diff % 86400000) / 3600000), m = Math.floor((diff % 3600000) / 60000), s = Math.floor((diff % 60000) / 1000);
   return (<div className="flex gap-2 text-center">
-    {d > 0 && <div className="bg-white/[0.04] rounded-xl px-2.5 py-1.5"><div className="text-lg font-black font-mono text-brand-400">{d}</div><div className="text-[9px] text-white/25 uppercase">дн</div></div>}
-    <div className="bg-white/[0.04] rounded-xl px-2.5 py-1.5"><div className="text-lg font-black font-mono text-brand-400">{String(h).padStart(2,'0')}</div><div className="text-[9px] text-white/25 uppercase">час</div></div>
-    <div className="bg-white/[0.04] rounded-xl px-2.5 py-1.5"><div className="text-lg font-black font-mono text-accent-400">{String(m).padStart(2,'0')}</div><div className="text-[9px] text-white/25 uppercase">мин</div></div>
-    <div className="bg-white/[0.04] rounded-xl px-2.5 py-1.5"><div className="text-lg font-black font-mono text-white/50">{String(s).padStart(2,'0')}</div><div className="text-[9px] text-white/25 uppercase">сек</div></div>
+    {d > 0 && <div className="bg-white/[0.04] rounded-xl px-2.5 py-1.5"><div className="text-lg font-black font-mono text-brand-400">{d}</div><div className="text-[9px] text-white/25 uppercase">{ds.d}</div></div>}
+    <div className="bg-white/[0.04] rounded-xl px-2.5 py-1.5"><div className="text-lg font-black font-mono text-brand-400">{String(h).padStart(2,'0')}</div><div className="text-[9px] text-white/25 uppercase">{ds.h}</div></div>
+    <div className="bg-white/[0.04] rounded-xl px-2.5 py-1.5"><div className="text-lg font-black font-mono text-accent-400">{String(m).padStart(2,'0')}</div><div className="text-[9px] text-white/25 uppercase">{ds.m}</div></div>
+    <div className="bg-white/[0.04] rounded-xl px-2.5 py-1.5"><div className="text-lg font-black font-mono text-white/50">{String(s).padStart(2,'0')}</div><div className="text-[9px] text-white/25 uppercase">{ds.s}</div></div>
   </div>);
 }
 
@@ -26,6 +73,7 @@ export default function DashboardPage() {
   const { user, loadUser, logout } = useAuth();
   const [locale] = useState(detectLocale());
   const t = getTranslation(locale);
+  const ds = D_STR[locale];
   const [tournaments, setTournaments] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -78,7 +126,7 @@ export default function DashboardPage() {
           <div className="mb-6 bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 animate-fade-in">
             <div className="text-2xl shrink-0">📧</div>
             <div className="flex-1">
-              <div className="text-amber-400 font-semibold text-sm">Подтвердите email</div>
+              <div className="text-amber-400 font-semibold text-sm">{ds.verifyEmailTitle}</div>
               <div className="text-white/60 text-xs mt-0.5">
                 Чтобы участвовать в турнирах и создавать вопросы, подтвердите свой email
               </div>
@@ -106,8 +154,8 @@ export default function DashboardPage() {
               <span className="badge-draft">DRAFT</span>
             </div>
             <div className="flex items-center justify-between mt-4 mb-4">
-              <span className="text-white/20 text-xs">До начала:</span>
-              <Countdown target={tr.startAt} />
+              <span className="text-white/20 text-xs">{ds.beforeStart}</span>
+              <Countdown target={tr.startAt} locale={locale} />
             </div>
             <TournamentCardCTA tr={tr} user={user} onApply={doApply} />
           </div>
@@ -119,7 +167,7 @@ export default function DashboardPage() {
               <div>
                 <h4 className="text-white font-bold text-lg">{tr.title}</h4>
                 <div className="flex gap-3 text-white/30 text-sm mt-1">
-                  <span>{tr._count?.participants || 0} players</span>
+                  <span>{tr._count?.participants || 0} {ds.players}</span>
                   <span>{tr.type}</span>
                 </div>
               </div>
@@ -129,7 +177,7 @@ export default function DashboardPage() {
           </div>
         ))}</div></section>}
 
-        <section className="animate-slide-up" style={{animationDelay:'0.2s',animationFillMode:'both'}}><h3 className="section-title mb-4">Завершённые (последняя неделя)</h3>{recent.length === 0 ? <div className="card text-center py-12"><div className="text-4xl mb-3 opacity-20">🏆</div><p className="text-white/30 text-sm">Нет завершённых турниров</p></div> : <div className="space-y-2">{recent.map(tr => <div key={tr.id} className="card-hover flex items-center justify-between"><div className="flex items-center gap-4 flex-1 cursor-pointer" onClick={() => router.push(`/watch/${tr.id}`)}><div className="w-10 h-10 rounded-xl bg-white/[0.04] flex items-center justify-center text-lg shrink-0">🏆</div><div><h4 className="text-white font-medium">{tr.title}</h4><div className="flex gap-2 text-white/30 text-xs mt-0.5"><span>{tr.type}</span><span>{tr._count?.participants||0} players</span></div></div></div><div className="flex items-center gap-2"><button onClick={e => { e.stopPropagation(); router.push(`/vote/${tr.id}`); }} className="px-3 py-1.5 rounded-xl bg-accent-500/10 hover:bg-accent-500/20 text-accent-400 text-xs font-semibold transition">⭐ Лучший вопрос</button><span className="badge-finished">Finished</span></div></div>)}</div>}</section>
+        <section className="animate-slide-up" style={{animationDelay:'0.2s',animationFillMode:'both'}}><h3 className="section-title mb-4">{ds.finishedThisWeek}</h3>{recent.length === 0 ? <div className="card text-center py-12"><div className="text-4xl mb-3 opacity-20">🏆</div><p className="text-white/30 text-sm">{ds.noFinished}</p></div> : <div className="space-y-2">{recent.map(tr => <div key={tr.id} className="card-hover flex items-center justify-between"><div className="flex items-center gap-4 flex-1 cursor-pointer" onClick={() => router.push(`/watch/${tr.id}`)}><div className="w-10 h-10 rounded-xl bg-white/[0.04] flex items-center justify-center text-lg shrink-0">🏆</div><div><h4 className="text-white font-medium">{tr.title}</h4><div className="flex gap-2 text-white/30 text-xs mt-0.5"><span>{tr.type}</span><span>{tr._count?.participants||0} {ds.players}</span></div></div></div><div className="flex items-center gap-2"><button onClick={e => { e.stopPropagation(); router.push(`/vote/${tr.id}`); }} className="px-3 py-1.5 rounded-xl bg-accent-500/10 hover:bg-accent-500/20 text-accent-400 text-xs font-semibold transition">{ds.bestQuestion}</button><span className="badge-finished">{ds.finished}</span></div></div>)}</div>}</section>
       </main>
     </div>
   );
