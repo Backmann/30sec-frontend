@@ -8,13 +8,264 @@ import AvatarUploader from '@/components/AvatarUploader';
 import AchievementsGrid from '@/components/AchievementsGrid';
 import ActivityHeatmap from '@/components/ActivityHeatmap';
 import WeeklyChart from '@/components/WeeklyChart';
-import { detectLocale, getTranslation } from '@/lib/i18n';
+import { detectLocale, getTranslation, Locale } from '@/lib/i18n';
+
+const P_STR: Record<Locale, {
+  saved: string;
+  errorPrefix: string;
+  tabStats: string;
+  tabAchievements: string;
+  tabAnswers: string;
+  tabTournaments: string;
+  tabSettings: string;
+  emailVerified: string;
+  emailNotVerified: string;
+  totalAnswered: string;
+  correct: string;
+  wrong: string;
+  accuracy: string;
+  bestStreak: string;
+  currentStreak: string;
+  wins12_0: string;
+  losses0_12: string;
+  finals: string;
+  weekly: string;
+  monthly: string;
+  seasonal: string;
+  yearly: string;
+  noRank: string;
+  toNextRank: string;
+  maxRank: string;
+  noAnswersYet: string;
+  awaitingJudgement: string;
+  pageOf: string;
+  noTournaments: string;
+  avatar: string;
+  nickname: string;
+  nicknameHint: string;
+  language: string;
+  russian: string;
+  dateOfBirth: string;
+  gender: string;
+  notSpecified: string;
+  male: string;
+  female: string;
+  other: string;
+  city: string;
+  phone: string;
+  phoneOptional: string;
+  about: string;
+  bioPlaceholder: string;
+  privacyTitle: string;
+  showRealName: string;
+  showCountry: string;
+  showCity: string;
+  showAge: string;
+  emailNeverShown: string;
+  myDataGdpr: string;
+  gdprText: string;
+  exportError: string;
+  downloadData: string;
+  promptPassword: string;
+  confirmDelete: string;
+  deletedSuccess: string;
+  errorGeneric: string;
+  deleteAccount: string;
+}> = {
+  ru: {
+    saved: '✓ Сохранено',
+    errorPrefix: 'Ошибка: ',
+    tabStats: '📊 Статистика',
+    tabAchievements: '🏅 Достижения',
+    tabAnswers: '📝 Ответы',
+    tabTournaments: '🏆 Турниры',
+    tabSettings: '⚙️ Настройки',
+    emailVerified: 'Email ✓',
+    emailNotVerified: 'Email не подтверждён',
+    totalAnswered: 'Всего ответов',
+    correct: 'Правильных',
+    wrong: 'Неправильных',
+    accuracy: 'Точность',
+    bestStreak: 'Лучшая серия',
+    currentStreak: 'Текущая серия',
+    wins12_0: 'Побед 12:0',
+    losses0_12: 'Поражений 0:12',
+    finals: 'Финалы',
+    weekly: 'Недельные',
+    monthly: 'Месячные',
+    seasonal: 'Сезонные',
+    yearly: 'Годовые',
+    noRank: 'Без ранга',
+    toNextRank: 'Осталось {n} правильных ответов до «{rank}»',
+    maxRank: 'Достигнут максимальный ранг 👑',
+    noAnswersYet: 'Пока нет ответов',
+    awaitingJudgement: 'ожидание',
+    pageOf: 'Страница {p} из {t}',
+    noTournaments: 'Пока нет турниров',
+    avatar: 'Аватар',
+    nickname: 'Никнейм',
+    nicknameHint: 'Буквы, цифры и _ (3-20 символов). Можно менять раз в 30 дней.',
+    language: 'Язык / Language',
+    russian: 'Русский',
+    dateOfBirth: 'Дата рождения',
+    gender: 'Пол',
+    notSpecified: 'Не указано',
+    male: 'Мужской',
+    female: 'Женский',
+    other: 'Другое',
+    city: 'Город',
+    phone: 'Телефон',
+    phoneOptional: '(необязательно)',
+    about: 'О себе',
+    bioPlaceholder: 'Расскажите о себе несколько слов...',
+    privacyTitle: '🔒 Приватность публичного профиля',
+    showRealName: 'Показывать настоящее имя',
+    showCountry: 'Показывать страну и флаг',
+    showCity: 'Показывать город',
+    showAge: 'Показывать возраст (вычисляется из даты рождения)',
+    emailNeverShown: 'Email никогда не показывается другим игрокам',
+    myDataGdpr: 'Мои данные (GDPR)',
+    gdprText: 'Согласно GDPR, вы имеете право скачать свои данные или удалить аккаунт в любой момент.',
+    exportError: 'Ошибка экспорта: ',
+    downloadData: 'Скачать мои данные (JSON)',
+    promptPassword: 'Для подтверждения удаления введите ваш пароль:',
+    confirmDelete: 'Вы УВЕРЕНЫ что хотите удалить аккаунт? Это действие необратимо.\n\nВаша история турниров будет анонимизирована, но сохранена для целостности данных.',
+    deletedSuccess: 'Аккаунт удалён. Вы будете перенаправлены на главную.',
+    errorGeneric: 'Ошибка',
+    deleteAccount: 'Удалить аккаунт',
+  },
+  en: {
+    saved: '✓ Saved',
+    errorPrefix: 'Error: ',
+    tabStats: '📊 Statistics',
+    tabAchievements: '🏅 Achievements',
+    tabAnswers: '📝 Answers',
+    tabTournaments: '🏆 Tournaments',
+    tabSettings: '⚙️ Settings',
+    emailVerified: 'Email ✓',
+    emailNotVerified: 'Email not verified',
+    totalAnswered: 'Total answers',
+    correct: 'Correct',
+    wrong: 'Wrong',
+    accuracy: 'Accuracy',
+    bestStreak: 'Best streak',
+    currentStreak: 'Current streak',
+    wins12_0: 'Wins 12:0',
+    losses0_12: 'Losses 0:12',
+    finals: 'Finals',
+    weekly: 'Weekly',
+    monthly: 'Monthly',
+    seasonal: 'Seasonal',
+    yearly: 'Yearly',
+    noRank: 'No rank',
+    toNextRank: '{n} correct answers to reach «{rank}»',
+    maxRank: 'Max rank reached 👑',
+    noAnswersYet: 'No answers yet',
+    awaitingJudgement: 'pending',
+    pageOf: 'Page {p} of {t}',
+    noTournaments: 'No tournaments yet',
+    avatar: 'Avatar',
+    nickname: 'Nickname',
+    nicknameHint: 'Letters, digits and _ (3-20 chars). Can be changed once every 30 days.',
+    language: 'Language',
+    russian: 'Russian',
+    dateOfBirth: 'Date of birth',
+    gender: 'Gender',
+    notSpecified: 'Not specified',
+    male: 'Male',
+    female: 'Female',
+    other: 'Other',
+    city: 'City',
+    phone: 'Phone',
+    phoneOptional: '(optional)',
+    about: 'About',
+    bioPlaceholder: 'Tell others a few words about yourself...',
+    privacyTitle: '🔒 Public profile privacy',
+    showRealName: 'Show real name',
+    showCountry: 'Show country and flag',
+    showCity: 'Show city',
+    showAge: 'Show age (computed from date of birth)',
+    emailNeverShown: 'Email is never shown to other players',
+    myDataGdpr: 'My data (GDPR)',
+    gdprText: 'Under GDPR you have the right to download your data or delete your account at any time.',
+    exportError: 'Export error: ',
+    downloadData: 'Download my data (JSON)',
+    promptPassword: 'To confirm deletion, please enter your password:',
+    confirmDelete: 'Are you SURE you want to delete your account? This action cannot be undone.\n\nYour tournament history will be anonymised but kept for data integrity.',
+    deletedSuccess: 'Account deleted. You will be redirected to home.',
+    errorGeneric: 'Error',
+    deleteAccount: 'Delete account',
+  },
+  de: {
+    saved: '✓ Gespeichert',
+    errorPrefix: 'Fehler: ',
+    tabStats: '📊 Statistik',
+    tabAchievements: '🏅 Erfolge',
+    tabAnswers: '📝 Antworten',
+    tabTournaments: '🏆 Turniere',
+    tabSettings: '⚙️ Einstellungen',
+    emailVerified: 'E-Mail ✓',
+    emailNotVerified: 'E-Mail nicht bestätigt',
+    totalAnswered: 'Antworten gesamt',
+    correct: 'Richtig',
+    wrong: 'Falsch',
+    accuracy: 'Genauigkeit',
+    bestStreak: 'Beste Serie',
+    currentStreak: 'Aktuelle Serie',
+    wins12_0: 'Siege 12:0',
+    losses0_12: 'Niederlagen 0:12',
+    finals: 'Finals',
+    weekly: 'Wöchentlich',
+    monthly: 'Monatlich',
+    seasonal: 'Saisonal',
+    yearly: 'Jährlich',
+    noRank: 'Kein Rang',
+    toNextRank: 'Noch {n} richtige Antworten bis «{rank}»',
+    maxRank: 'Höchster Rang erreicht 👑',
+    noAnswersYet: 'Noch keine Antworten',
+    awaitingJudgement: 'wartet',
+    pageOf: 'Seite {p} von {t}',
+    noTournaments: 'Noch keine Turniere',
+    avatar: 'Avatar',
+    nickname: 'Nickname',
+    nicknameHint: 'Buchstaben, Ziffern und _ (3-20 Zeichen). Änderbar alle 30 Tage.',
+    language: 'Sprache',
+    russian: 'Russisch',
+    dateOfBirth: 'Geburtsdatum',
+    gender: 'Geschlecht',
+    notSpecified: 'Nicht angegeben',
+    male: 'Männlich',
+    female: 'Weiblich',
+    other: 'Andere',
+    city: 'Stadt',
+    phone: 'Telefon',
+    phoneOptional: '(optional)',
+    about: 'Über mich',
+    bioPlaceholder: 'Erzähle in ein paar Worten über dich...',
+    privacyTitle: '🔒 Privatsphäre des öffentlichen Profils',
+    showRealName: 'Echten Namen anzeigen',
+    showCountry: 'Land und Flagge anzeigen',
+    showCity: 'Stadt anzeigen',
+    showAge: 'Alter anzeigen (aus Geburtsdatum berechnet)',
+    emailNeverShown: 'E-Mail wird anderen Spielern nie gezeigt',
+    myDataGdpr: 'Meine Daten (DSGVO)',
+    gdprText: 'Gemäß DSGVO hast du das Recht, deine Daten herunterzuladen oder dein Konto jederzeit zu löschen.',
+    exportError: 'Export-Fehler: ',
+    downloadData: 'Meine Daten herunterladen (JSON)',
+    promptPassword: 'Zur Bestätigung der Löschung gib bitte dein Passwort ein:',
+    confirmDelete: 'Bist du SICHER, dass du dein Konto löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.\n\nDeine Turnierhistorie wird anonymisiert, aber zur Datenintegrität erhalten.',
+    deletedSuccess: 'Konto gelöscht. Du wirst zur Startseite weitergeleitet.',
+    errorGeneric: 'Fehler',
+    deleteAccount: 'Konto löschen',
+  },
+};
 
 export default function ProfilePage() {
   const router = useRouter();
   const { user, loadUser, logout } = useAuth();
   const locale = detectLocale();
   const t = getTranslation(locale);
+  const pt = P_STR[locale];
 
   const [profile, setProfile] = useState<any>(null);
   const [history, setHistory] = useState<any>(null);
@@ -73,12 +324,12 @@ export default function ProfilePage() {
   const saveProfile = async () => {
     try {
       await api.updateProfile(editForm);
-      setSaveMsg('✓ Сохранено');
+      setSaveMsg(pt.saved);
       setEditMode(false);
       await Promise.all([api.getMyProfile().then(setProfile), loadUser()]);
       setTimeout(() => setSaveMsg(''), 3000);
     } catch (err: any) {
-      setSaveMsg('Ошибка: ' + err.message);
+      setSaveMsg(pt.errorPrefix + err.message);
     }
   };
 
@@ -135,11 +386,11 @@ export default function ProfilePage() {
   const rankInfo = stats?.rank;
 
   const tabs = [
-    { id: 'stats', label: '📊 Статистика' },
-    { id: 'achievements', label: '🏅 Достижения' },
-    { id: 'answers', label: '📝 Ответы' },
-    { id: 'tournaments', label: '🏆 Турниры' },
-    { id: 'settings', label: '⚙️ Настройки' },
+    { id: 'stats', label: pt.tabStats },
+    { id: 'achievements', label: pt.tabAchievements },
+    { id: 'answers', label: pt.tabAnswers },
+    { id: 'tournaments', label: pt.tabTournaments },
+    { id: 'settings', label: pt.tabSettings },
   ];
 
   return (
@@ -172,9 +423,9 @@ export default function ProfilePage() {
                 )}
                 <span className="badge-draft">{user.role}</span>
                 {profile?.emailVerifiedAt ? (
-                  <span className="badge-finished">Email ✓</span>
+                  <span className="badge-finished">{pt.emailVerified}</span>
                 ) : (
-                  <span className="badge bg-amber-500/15 text-amber-400 border border-amber-500/20">Email не подтверждён</span>
+                  <span className="badge bg-amber-500/15 text-amber-400 border border-amber-500/20">{pt.emailNotVerified}</span>
                 )}
               </div>
             </div>
@@ -206,14 +457,14 @@ export default function ProfilePage() {
           <div className="animate-fade-in space-y-6">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { label: 'Всего ответов', value: stats.totalAnswered, color: 'text-white' },
-                { label: 'Правильных', value: stats.totalCorrect, color: 'text-green-400' },
-                { label: 'Неправильных', value: stats.totalWrong, color: 'text-red-400' },
-                { label: 'Точность', value: `${stats.accuracyPercent}%`, color: 'text-brand-400' },
-                { label: 'Лучшая серия', value: stats.bestStreak, color: 'text-accent-400' },
-                { label: 'Текущая серия', value: stats.currentStreak, color: 'text-accent-400' },
-                { label: 'Побед 12:0', value: stats.wins12_0, color: 'text-green-400' },
-                { label: 'Поражений 0:12', value: stats.losses0_12, color: 'text-red-400' },
+                { label: pt.totalAnswered, value: stats.totalAnswered, color: 'text-white' },
+                { label: pt.correct, value: stats.totalCorrect, color: 'text-green-400' },
+                { label: pt.wrong, value: stats.totalWrong, color: 'text-red-400' },
+                { label: pt.accuracy, value: `${stats.accuracyPercent}%`, color: 'text-brand-400' },
+                { label: pt.bestStreak, value: stats.bestStreak, color: 'text-accent-400' },
+                { label: pt.currentStreak, value: stats.currentStreak, color: 'text-accent-400' },
+                { label: pt.wins12_0, value: stats.wins12_0, color: 'text-green-400' },
+                { label: pt.losses0_12, value: stats.losses0_12, color: 'text-red-400' },
               ].map((s, i) => (
                 <div key={i} className="card text-center">
                   <div className={`text-2xl font-black font-mono ${s.color}`}>{s.value}</div>
@@ -224,13 +475,13 @@ export default function ProfilePage() {
 
             {/* Finals */}
             <div className="card">
-              <h3 className="text-sm font-semibold text-white/50 mb-3">Финалы</h3>
+              <h3 className="text-sm font-semibold text-white/50 mb-3">{pt.finals}</h3>
               <div className="grid grid-cols-4 gap-3 text-center">
                 {[
-                  { label: 'Недельные', value: stats.weeklyFinals },
-                  { label: 'Месячные', value: stats.monthlyFinals },
-                  { label: 'Сезонные', value: stats.seasonFinals },
-                  { label: 'Годовые', value: stats.yearlyFinals },
+                  { label: pt.weekly, value: stats.weeklyFinals },
+                  { label: pt.monthly, value: stats.monthlyFinals },
+                  { label: pt.seasonal, value: stats.seasonFinals },
+                  { label: pt.yearly, value: stats.yearlyFinals },
                 ].map((f, i) => (
                   <div key={i}>
                     <div className="text-lg font-bold font-mono text-white/60">{f.value}</div>
@@ -247,7 +498,7 @@ export default function ProfilePage() {
                     {rankProgress.current && (
                       <span className="text-2xl">{rankProgress.current.icon}</span>
                     )}
-                    <span className="text-white font-semibold">{rankProgress.current?.title || 'Без ранга'}</span>
+                    <span className="text-white font-semibold">{rankProgress.current?.title || pt.noRank}</span>
                   </div>
                   {rankProgress.next && (
                     <div className="flex items-center gap-2 text-sm">
@@ -265,8 +516,8 @@ export default function ProfilePage() {
                 </div>
                 <div className="text-xs text-white/50 mt-2">
                   {rankProgress.next
-                    ? <>Осталось <span className="text-brand-400 font-bold">{rankProgress.toNext}</span> правильных ответов до «{rankProgress.next.title}»</>
-                    : <>Достигнут максимальный ранг 👑</>}
+                    ? pt.toNextRank.replace('{n}', String(rankProgress.toNext)).replace('{rank}', rankProgress.next.title)
+                    : pt.maxRank}
                 </div>
               </div>
             )}
@@ -296,7 +547,7 @@ export default function ProfilePage() {
         {tab === 'answers' && history && (
           <div className="animate-fade-in space-y-2">
             {history.data?.length === 0 ? (
-              <div className="card text-center py-12 text-white/30">Пока нет ответов</div>
+              <div className="card text-center py-12 text-white/30">{pt.noAnswersYet}</div>
             ) : history.data?.map((a: any) => (
               <div key={a.id} className="card flex items-center justify-between">
                 <div className="flex-1 min-w-0">
@@ -308,7 +559,7 @@ export default function ProfilePage() {
                     <span className="text-white font-medium">"{a.answerText}"</span>
                     {a.decision === 'ACCEPTED' && <span className="text-green-400 text-xs font-semibold">✓</span>}
                     {a.decision === 'REJECTED' && <span className="text-red-400 text-xs font-semibold">✗</span>}
-                    {!a.decision && <span className="text-white/20 text-xs">ожидание</span>}
+                    {!a.decision && <span className="text-white/20 text-xs">{pt.awaitingJudgement}</span>}
                   </div>
                 </div>
                 <div className="text-white/20 text-[10px] font-mono shrink-0 ml-3">
@@ -317,7 +568,7 @@ export default function ProfilePage() {
               </div>
             ))}
             {history?.pagination?.totalPages > 1 && (
-              <p className="text-center text-white/20 text-xs mt-4">Страница {history.pagination.page} из {history.pagination.totalPages}</p>
+              <p className="text-center text-white/20 text-xs mt-4">{pt.pageOf.replace('{p}', String(history.pagination.page)).replace('{t}', String(history.pagination.totalPages))}</p>
             )}
           </div>
         )}
@@ -326,7 +577,7 @@ export default function ProfilePage() {
         {tab === 'tournaments' && (
           <div className="animate-fade-in space-y-2">
             {tournamentHistory.length === 0 ? (
-              <div className="card text-center py-12 text-white/30">Пока нет турниров</div>
+              <div className="card text-center py-12 text-white/30">{pt.noTournaments}</div>
             ) : tournamentHistory.map((tp: any) => (
               <div key={tp.id} className="card-hover flex items-center justify-between"
                 onClick={() => router.push(`/game/${tp.tournament?.id}`)}>
@@ -354,7 +605,7 @@ export default function ProfilePage() {
           <div className="animate-fade-in">
             <div className="card space-y-4">
               <div>
-                <label className="input-label">Аватар</label>
+                <label className="input-label">{pt.avatar}</label>
                 <AvatarUploader
                   currentUrl={editForm.avatarUrl}
                   fallbackText={editForm.nickname || profile?.profile?.nickname}
@@ -363,10 +614,10 @@ export default function ProfilePage() {
                 />
               </div>
               <div>
-                <label className="input-label">Никнейм</label>
+                <label className="input-label">{pt.nickname}</label>
                 <input type="text" value={editForm.nickname} onChange={(e) => setEditForm({...editForm, nickname: e.target.value})}
                   className="input-field"  placeholder="my_nickname" />
-                <p className="text-white/20 text-[10px] mt-1">Буквы, цифры и _ (3-20 символов). Можно менять раз в 30 дней.</p>
+                <p className="text-white/20 text-[10px] mt-1">{pt.nicknameHint}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -383,10 +634,10 @@ export default function ProfilePage() {
               </div>
 
               <div>
-                <label className="input-label">Язык / Language</label>
+                <label className="input-label">{pt.language}</label>
                 <select value={editForm.language} onChange={(e) => setEditForm({...editForm, language: e.target.value})}
                   className="input-field" >
-                  <option value="ru">Русский</option>
+                  <option value="ru">{pt.russian}</option>
                   <option value="de">Deutsch</option>
                   <option value="en">English</option>
                 </select>
@@ -394,74 +645,74 @@ export default function ProfilePage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="input-label">Дата рождения</label>
+                  <label className="input-label">{pt.dateOfBirth}</label>
                   <input type="date" value={editForm.dateOfBirth} onChange={(e) => setEditForm({...editForm, dateOfBirth: e.target.value})}
                     className="input-field"  />
                 </div>
                 <div>
-                  <label className="input-label">Пол</label>
+                  <label className="input-label">{pt.gender}</label>
                   <select value={editForm.gender} onChange={(e) => setEditForm({...editForm, gender: e.target.value})}
                     className="input-field"  style={{colorScheme:'dark'}}>
-                    <option value="">Не указано</option>
-                    <option value="male">Мужской</option>
-                    <option value="female">Женский</option>
-                    <option value="other">Другое</option>
+                    <option value="">{pt.notSpecified}</option>
+                    <option value="male">{pt.male}</option>
+                    <option value="female">{pt.female}</option>
+                    <option value="other">{pt.other}</option>
                   </select>
                 </div>
               </div>
               <div>
-                <label className="input-label">Город</label>
+                <label className="input-label">{pt.city}</label>
                 <input type="text" value={editForm.city} onChange={(e) => setEditForm({...editForm, city: e.target.value})}
                   className="input-field"  placeholder="Berlin, Moscow, etc." />
               </div>
               <div>
-                <label className="input-label">Телефон (необязательно)</label>
+                <label className="input-label">{pt.phone} {pt.phoneOptional}</label>
                 <input type="tel" value={editForm.phone} onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
                   className="input-field"  placeholder="+49..." />
               </div>
               <div>
-                <label className="input-label">О себе <span className="text-white/30">({editForm.bio.length}/500)</span></label>
+                <label className="input-label">{pt.about} <span className="text-white/30">({editForm.bio.length}/500)</span></label>
                 <textarea value={editForm.bio} onChange={(e) => setEditForm({...editForm, bio: e.target.value.slice(0, 500)})}
                   className="input-field min-h-[80px] resize-y"  rows={3}
-                  placeholder="Расскажите о себе несколько слов..." />
+                  placeholder={pt.bioPlaceholder} />
               </div>
               <div className="pt-3 border-t border-white/[0.05]">
-                <div className="text-[10px] uppercase tracking-wider text-white/40 mb-3">🔒 Приватность публичного профиля</div>
+                <div className="text-[10px] uppercase tracking-wider text-white/40 mb-3">{pt.privacyTitle}</div>
                 <div className="space-y-2.5">
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input type="checkbox" checked={editForm.showRealName}
                       onChange={(e) => setEditForm({...editForm, showRealName: e.target.checked})}
                       className="w-4 h-4 rounded bg-dark-700 border-white/20 accent-brand-500" />
-                    <span className="text-white/70 text-sm">Показывать настоящее имя</span>
+                    <span className="text-white/70 text-sm">{pt.showRealName}</span>
                   </label>
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input type="checkbox" checked={editForm.showCountry}
                       onChange={(e) => setEditForm({...editForm, showCountry: e.target.checked})}
                       className="w-4 h-4 rounded bg-dark-700 border-white/20 accent-brand-500" />
-                    <span className="text-white/70 text-sm">Показывать страну и флаг</span>
+                    <span className="text-white/70 text-sm">{pt.showCountry}</span>
                   </label>
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input type="checkbox" checked={editForm.showCity}
                       onChange={(e) => setEditForm({...editForm, showCity: e.target.checked})}
                       className="w-4 h-4 rounded bg-dark-700 border-white/20 accent-brand-500" />
-                    <span className="text-white/70 text-sm">Показывать город</span>
+                    <span className="text-white/70 text-sm">{pt.showCity}</span>
                   </label>
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input type="checkbox" checked={editForm.showAge}
                       onChange={(e) => setEditForm({...editForm, showAge: e.target.checked})}
                       className="w-4 h-4 rounded bg-dark-700 border-white/20 accent-brand-500" />
-                    <span className="text-white/70 text-sm">Показывать возраст (вычисляется из даты рождения)</span>
+                    <span className="text-white/70 text-sm">{pt.showAge}</span>
                   </label>
                 </div>
-                <div className="text-[10px] text-white/30 mt-3">Email никогда не показывается другим игрокам</div>
+                <div className="text-[10px] text-white/30 mt-3">{pt.emailNeverShown}</div>
               </div>
 
               {saveMsg && !hasChanges && <div className="text-green-400 text-sm">{saveMsg}</div>}
             </div>
 
             <div className="card mt-4">
-              <h3 className="text-white font-semibold mb-3">Мои данные (GDPR)</h3>
-              <p className="text-white/40 text-xs mb-4">Согласно GDPR, вы имеете право скачать свои данные или удалить аккаунт в любой момент.</p>
+              <h3 className="text-white font-semibold mb-3">{pt.myDataGdpr}</h3>
+              <p className="text-white/40 text-xs mb-4">{pt.gdprText}</p>
               <div className="space-y-2">
                 <button onClick={async () => {
                   try {
@@ -477,14 +728,14 @@ export default function ProfilePage() {
                     a.download = `30sec-data-${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     URL.revokeObjectURL(url);
-                  } catch(e:any) { alert('Ошибка экспорта: ' + e.message); }
+                  } catch(e:any) { alert(pt.exportError + e.message); }
                 }} className="btn-secondary text-sm w-full text-center">
-                  Скачать мои данные (JSON)
+                  {pt.downloadData}
                 </button>
                 <button onClick={async () => {
-                  const pwd = prompt('Для подтверждения удаления введите ваш пароль:');
+                  const pwd = prompt(pt.promptPassword);
                   if (!pwd) return;
-                  if (!confirm('Вы УВЕРЕНЫ что хотите удалить аккаунт? Это действие необратимо.\n\nВаша история турниров будет анонимизирована, но сохранена для целостности данных.')) return;
+                  if (!confirm(pt.confirmDelete)) return;
                   try {
                     const token = localStorage.getItem('accessToken');
                     const res = await fetch((process.env.NEXT_PUBLIC_API_URL || '/api') + '/me/gdpr/delete-account', {
@@ -493,13 +744,13 @@ export default function ProfilePage() {
                       body: JSON.stringify({ confirmPassword: pwd })
                     });
                     const data = await res.json();
-                    if (!res.ok) throw new Error(data.message?.[0] || data.message || 'Ошибка');
-                    alert('Аккаунт удалён. Вы будете перенаправлены на главную.');
+                    if (!res.ok) throw new Error(data.message?.[0] || data.message || pt.errorGeneric);
+                    alert(pt.deletedSuccess);
                     logout();
                     router.push('/');
-                  } catch(e:any) { alert('Ошибка: ' + e.message); }
+                  } catch(e:any) { alert(pt.errorPrefix + e.message); }
                 }} className="text-sm w-full text-center px-4 py-2.5 rounded-2xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 font-medium">
-                  Удалить аккаунт
+                  {pt.deleteAccount}
                 </button>
               </div>
             </div>

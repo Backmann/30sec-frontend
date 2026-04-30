@@ -4,13 +4,60 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/store';
 import { api } from '@/lib/api';
-import { detectLocale, getTranslation } from '@/lib/i18n';
+import { detectLocale, getTranslation, Locale } from '@/lib/i18n';
+
+const LB_STR: Record<Locale, {
+  topPlayers: string;
+  byAccuracy: string;
+  ranks: string;
+  noData: string;
+  answers: string;
+  streak: string;
+  correct: string;
+  accuracyLabel: string;
+  fromCorrectAnswers: string;
+}> = {
+  ru: {
+    topPlayers: '🔥 Топ игроки',
+    byAccuracy: '🎯 По точности',
+    ranks: '⭐ Ранги',
+    noData: 'Пока нет данных',
+    answers: 'ответов',
+    streak: 'серия',
+    correct: 'правильных',
+    accuracyLabel: 'точность',
+    fromCorrectAnswers: 'от {n} правильных ответов',
+  },
+  en: {
+    topPlayers: '🔥 Top players',
+    byAccuracy: '🎯 By accuracy',
+    ranks: '⭐ Ranks',
+    noData: 'No data yet',
+    answers: 'answers',
+    streak: 'streak',
+    correct: 'correct',
+    accuracyLabel: 'accuracy',
+    fromCorrectAnswers: 'from {n} correct answers',
+  },
+  de: {
+    topPlayers: '🔥 Top-Spieler',
+    byAccuracy: '🎯 Nach Genauigkeit',
+    ranks: '⭐ Ränge',
+    noData: 'Noch keine Daten',
+    answers: 'Antworten',
+    streak: 'Serie',
+    correct: 'richtig',
+    accuracyLabel: 'Genauigkeit',
+    fromCorrectAnswers: 'ab {n} richtigen Antworten',
+  },
+};
 
 export default function LeaderboardPage() {
   const router = useRouter();
   const { user, loadUser } = useAuth();
   const locale = detectLocale();
   const t = getTranslation(locale);
+  const lt = LB_STR[locale];
 
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [ranks, setRanks] = useState<any[]>([]);
@@ -68,9 +115,9 @@ export default function LeaderboardPage() {
         {/* Tabs */}
         <div className="flex gap-1 mb-6">
           {[
-            { id: 'top', label: '🔥 Топ игроки' },
-            { id: 'accuracy', label: '🎯 По точности' },
-            { id: 'ranks', label: '⭐ Ранги' },
+            { id: 'top', label: lt.topPlayers },
+            { id: 'accuracy', label: lt.byAccuracy },
+            { id: 'ranks', label: lt.ranks },
           ].map((tb) => (
             <button key={tb.id} onClick={() => setTab(tb.id as any)}
               className={`px-4 py-2.5 rounded-2xl text-sm transition-all ${
@@ -91,7 +138,7 @@ export default function LeaderboardPage() {
             {(tab === 'top' || tab === 'accuracy') && (
               <div className="space-y-2 animate-fade-in">
                 {leaderboard.length === 0 ? (
-                  <div className="card text-center py-16 text-white/30">Пока нет данных</div>
+                  <div className="card text-center py-16 text-white/30">{lt.noData}</div>
                 ) : leaderboard
                   .sort((a, b) => tab === 'accuracy'
                     ? parseFloat(b.accuracyPercent) - parseFloat(a.accuracyPercent)
@@ -129,7 +176,7 @@ export default function LeaderboardPage() {
                               {p.rank && <span className="text-[10px]">{p.rank.icon}</span>}
                             </div>
                             <div className="text-white/25 text-[10px] mt-0.5">
-                              {p.totalAnswered} ответов · серия {p.bestStreak}
+                              {p.totalAnswered} {lt.answers} · {lt.streak} {p.bestStreak}
                             </div>
                           </div>
                         </div>
@@ -142,7 +189,7 @@ export default function LeaderboardPage() {
                             <div className="text-lg font-black font-mono text-green-400">{p.totalCorrect}</div>
                           )}
                           <div className="text-white/20 text-[10px]">
-                            {tab === 'accuracy' ? `${p.totalCorrect} правильных` : `${p.accuracyPercent}% точность`}
+                            {tab === 'accuracy' ? `${p.totalCorrect} ${lt.correct}` : `${p.accuracyPercent}% ${lt.accuracyLabel}`}
                           </div>
                         </div>
                       </div>
@@ -160,7 +207,7 @@ export default function LeaderboardPage() {
                       <div className="text-3xl">{rank.icon}</div>
                       <div>
                         <h3 className="text-white font-bold">{rank.title}</h3>
-                        <p className="text-white/30 text-xs mt-0.5">от {rank.thresholdCorrectAnswers} правильных ответов</p>
+                        <p className="text-white/30 text-xs mt-0.5">{lt.fromCorrectAnswers.replace('{n}', String(rank.thresholdCorrectAnswers))}</p>
                       </div>
                     </div>
                     <div className="text-right">
