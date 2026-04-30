@@ -5,16 +5,107 @@ import { api } from '@/lib/api';
 import AchievementsGrid from '@/components/AchievementsGrid';
 import ActivityHeatmap from '@/components/ActivityHeatmap';
 import WeeklyChart from '@/components/WeeklyChart';
+import { detectLocale, Locale } from '@/lib/i18n';
 
-function formatDate(d: string | Date | null | undefined) {
+const PL_STR: Record<Locale, {
+  notFound: string;
+  toLeaderboard: string;
+  back: string;
+  leaderboard: string;
+  yearsOld: string;
+  playingSince: string;
+  wins: string;
+  losses: string;
+  winrate: string;
+  accuracy: string;
+  tournaments: string;
+  answers: string;
+  correct: string;
+  bestStreak: string;
+  noRank: string;
+  toNextRank: string;
+  maxRank: string;
+  recentTournaments: string;
+  achievements: string;
+}> = {
+  ru: {
+    notFound: 'Игрок не найден',
+    toLeaderboard: '← Рейтинг',
+    back: '← Назад',
+    leaderboard: 'Рейтинг',
+    yearsOld: 'лет',
+    playingSince: 'Играет с',
+    wins: 'Побед',
+    losses: 'Поражений',
+    winrate: 'Winrate',
+    accuracy: 'Точность',
+    tournaments: 'Турниров',
+    answers: 'Ответов',
+    correct: 'Правильных',
+    bestStreak: 'Лучшая серия',
+    noRank: 'Без ранга',
+    toNextRank: 'Осталось {n} правильных ответов до «{rank}»',
+    maxRank: 'Достигнут максимальный ранг 👑',
+    recentTournaments: 'Последние турниры',
+    achievements: 'Достижения',
+  },
+  en: {
+    notFound: 'Player not found',
+    toLeaderboard: '← Leaderboard',
+    back: '← Back',
+    leaderboard: 'Leaderboard',
+    yearsOld: 'years old',
+    playingSince: 'Playing since',
+    wins: 'Wins',
+    losses: 'Losses',
+    winrate: 'Winrate',
+    accuracy: 'Accuracy',
+    tournaments: 'Tournaments',
+    answers: 'Answers',
+    correct: 'Correct',
+    bestStreak: 'Best streak',
+    noRank: 'No rank',
+    toNextRank: '{n} correct answers to reach «{rank}»',
+    maxRank: 'Max rank reached 👑',
+    recentTournaments: 'Recent tournaments',
+    achievements: 'Achievements',
+  },
+  de: {
+    notFound: 'Spieler nicht gefunden',
+    toLeaderboard: '← Rangliste',
+    back: '← Zurück',
+    leaderboard: 'Rangliste',
+    yearsOld: 'Jahre alt',
+    playingSince: 'Spielt seit',
+    wins: 'Siege',
+    losses: 'Niederlagen',
+    winrate: 'Winrate',
+    accuracy: 'Genauigkeit',
+    tournaments: 'Turniere',
+    answers: 'Antworten',
+    correct: 'Richtige',
+    bestStreak: 'Beste Serie',
+    noRank: 'Kein Rang',
+    toNextRank: 'Noch {n} richtige Antworten bis «{rank}»',
+    maxRank: 'Höchster Rang erreicht 👑',
+    recentTournaments: 'Letzte Turniere',
+    achievements: 'Erfolge',
+  },
+};
+
+function formatDate(d: string | Date | null | undefined, locale: Locale = 'ru') {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' });
+  const localeMap: Record<Locale, string> = { ru: 'ru-RU', en: 'en-GB', de: 'de-DE' };
+  return new Date(d).toLocaleDateString(localeMap[locale], { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 export default function PlayerPage() {
   const params = useParams();
   const nickname = params.nickname as string;
   const router = useRouter();
+  const [locale, setLocale] = useState<Locale>('ru');
+  useEffect(() => { setLocale(detectLocale()); }, []);
+  const pl = PL_STR[locale];
   const [player, setPlayer] = useState<any>(null);
   const [achievements, setAchievements] = useState<any[]>([]);
   const [activity, setActivity] = useState<any>(null);
@@ -30,8 +121,8 @@ export default function PlayerPage() {
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
         <div className="text-5xl mb-4 opacity-30">🔍</div>
-        <p className="text-white/40">Игрок не найден</p>
-        <button onClick={() => router.push('/leaderboard')} className="btn-secondary text-sm mt-4">← Рейтинг</button>
+        <p className="text-white/40">{pl.notFound}</p>
+        <button onClick={() => router.push('/leaderboard')} className="btn-secondary text-sm mt-4">{pl.toLeaderboard}</button>
       </div>
     </div>
   );
@@ -48,9 +139,9 @@ export default function PlayerPage() {
     <div className="min-h-screen bg-dark-900">
       <header className="border-b border-white/[0.06] bg-dark-900/80 backdrop-blur-2xl sticky top-0 z-50">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <button onClick={() => router.back()} className="text-white/40 hover:text-white text-sm">← Назад</button>
+          <button onClick={() => router.back()} className="text-white/40 hover:text-white text-sm">{pl.back}</button>
           <span className="text-white font-semibold">{player.nickname}</span>
-          <button onClick={() => router.push('/leaderboard')} className="text-white/40 hover:text-white text-sm">Рейтинг</button>
+          <button onClick={() => router.push('/leaderboard')} className="text-white/40 hover:text-white text-sm">{pl.leaderboard}</button>
         </div>
       </header>
 
@@ -76,7 +167,7 @@ export default function PlayerPage() {
             )}
             {player.age && (
               <span className="px-2.5 py-1 rounded-lg bg-white/5 text-white/70 text-xs">
-                {player.age} лет
+                {player.age} {pl.yearsOld}
               </span>
             )}
             {player.rank && (
@@ -88,19 +179,19 @@ export default function PlayerPage() {
           {player.bio && (
             <p className="text-white/60 text-sm mt-4 max-w-md mx-auto italic">"{player.bio}"</p>
           )}
-          <p className="text-white/25 text-xs mt-4">Играет с {formatDate(player.memberSince)}</p>
+          <p className="text-white/25 text-xs mt-4">{pl.playingSince} {formatDate(player.memberSince, locale)}</p>
         </div>
 
         {/* Stats grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 animate-slide-up" style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
-          <StatCard label="Побед" value={stats.wins} color="text-accent-400" icon="🏆" />
-          <StatCard label="Поражений" value={stats.losses} color="text-red-400" icon="·" />
-          <StatCard label="Winrate" value={`${stats.winRate}%`} color="text-brand-400" icon="⚡" />
-          <StatCard label="Точность" value={`${stats.accuracy}%`} color="text-green-400" icon="🎯" />
-          <StatCard label="Турниров" value={stats.tournamentsPlayed} color="text-white" icon="🎮" />
-          <StatCard label="Ответов" value={stats.answersTotal} color="text-white/70" icon="💭" />
-          <StatCard label="Правильных" value={stats.answersCorrect} color="text-green-400" icon="✓" />
-          <StatCard label="Лучшая серия" value={stats.bestStreak} color="text-accent-400" icon="🔥" />
+          <StatCard label={pl.wins} value={stats.wins} color="text-accent-400" icon="🏆" />
+          <StatCard label={pl.losses} value={stats.losses} color="text-red-400" icon="·" />
+          <StatCard label={pl.winrate} value={`${stats.winRate}%`} color="text-brand-400" icon="⚡" />
+          <StatCard label={pl.accuracy} value={`${stats.accuracy}%`} color="text-green-400" icon="🎯" />
+          <StatCard label={pl.tournaments} value={stats.tournamentsPlayed} color="text-white" icon="🎮" />
+          <StatCard label={pl.answers} value={stats.answersTotal} color="text-white/70" icon="💭" />
+          <StatCard label={pl.correct} value={stats.answersCorrect} color="text-green-400" icon="✓" />
+          <StatCard label={pl.bestStreak} value={stats.bestStreak} color="text-accent-400" icon="🔥" />
         </div>
 
         {/* Rank progress */}
@@ -111,7 +202,7 @@ export default function PlayerPage() {
                 {player.rankProgress.current && (
                   <span className="text-2xl">{player.rankProgress.current.icon}</span>
                 )}
-                <span className="text-white font-semibold">{player.rankProgress.current?.title || 'Без ранга'}</span>
+                <span className="text-white font-semibold">{player.rankProgress.current?.title || pl.noRank}</span>
               </div>
               {player.rankProgress.next && (
                 <div className="flex items-center gap-2 text-sm">
@@ -129,8 +220,8 @@ export default function PlayerPage() {
             </div>
             <div className="text-xs text-white/50 mt-2">
               {player.rankProgress.next
-                ? <>Осталось <span className="text-brand-400 font-bold">{player.rankProgress.toNext}</span> правильных ответов до «{player.rankProgress.next.title}»</>
-                : <>Достигнут максимальный ранг 👑</>
+                ? pl.toNextRank.replace('{n}', String(player.rankProgress.toNext)).replace('{rank}', player.rankProgress.next.title)
+                : pl.maxRank
               }
             </div>
           </div>
@@ -153,7 +244,7 @@ export default function PlayerPage() {
         {/* Recent tournaments */}
         {player.recentTournaments?.length > 0 && (
           <div className="card animate-slide-up" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
-            <div className="text-[10px] uppercase tracking-[0.2em] text-white/40 mb-3">Последние турниры</div>
+            <div className="text-[10px] uppercase tracking-[0.2em] text-white/40 mb-3">{pl.recentTournaments}</div>
             <div className="space-y-2">
               {player.recentTournaments.map((t: any) => (
                 <div key={t.id} className="flex items-center gap-3 py-2 px-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.04] transition cursor-pointer" onClick={() => router.push('/watch/' + t.id)}>
@@ -178,7 +269,7 @@ export default function PlayerPage() {
         {achievements.length > 0 && (
           <div className="card mt-6 animate-slide-up" style={{ animationDelay: '0.3s', animationFillMode: 'both' }}>
             <div className="text-[10px] uppercase tracking-[0.2em] text-white/40 mb-3">
-              Достижения · {achievements.length}
+              {pl.achievements} · {achievements.length}
             </div>
             <AchievementsGrid achievements={achievements} />
           </div>

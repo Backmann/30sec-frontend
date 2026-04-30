@@ -3,9 +3,39 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { detectLocale, Locale } from "@/lib/i18n";
+
+const N_STR: Record<Locale, {
+  title: string;
+  readAll: string;
+  loading: string;
+  noNotifications: string;
+}> = {
+  ru: {
+    title: 'Уведомления',
+    readAll: 'Прочитать все',
+    loading: 'Загрузка...',
+    noNotifications: 'Нет уведомлений',
+  },
+  en: {
+    title: 'Notifications',
+    readAll: 'Read all',
+    loading: 'Loading...',
+    noNotifications: 'No notifications',
+  },
+  de: {
+    title: 'Benachrichtigungen',
+    readAll: 'Alle lesen',
+    loading: 'Lädt...',
+    noNotifications: 'Keine Benachrichtigungen',
+  },
+};
 
 export default function NotificationBell() {
   const router = useRouter();
+  const [locale, setLocale] = useState<Locale>('ru');
+  useEffect(() => { setLocale(detectLocale()); }, []);
+  const nt = N_STR[locale];
   const [count, setCount] = useState(0);
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -81,18 +111,18 @@ export default function NotificationBell() {
       {open && (
         <div className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-y-auto bg-dark-800 border border-white/10 rounded-2xl shadow-2xl z-50">
           <div className="sticky top-0 flex items-center justify-between px-4 py-3 border-b border-white/10 bg-dark-800">
-            <h3 className="text-white font-semibold text-sm">Уведомления</h3>
+            <h3 className="text-white font-semibold text-sm">{nt.title}</h3>
             {count > 0 && (
               <button onClick={markAllAsRead} className="text-brand-400 hover:text-brand-300 text-xs">
-                Прочитать все
+                {nt.readAll}
               </button>
             )}
           </div>
 
           {loading ? (
-            <div className="py-8 text-center text-white/30 text-sm">Загрузка...</div>
+            <div className="py-8 text-center text-white/30 text-sm">{nt.loading}</div>
           ) : notifications.length === 0 ? (
-            <div className="py-8 text-center text-white/30 text-sm">Нет уведомлений</div>
+            <div className="py-8 text-center text-white/30 text-sm">{nt.noNotifications}</div>
           ) : (
             <div>
               {notifications.map(n => (
