@@ -5,9 +5,132 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/store';
 import { api } from '@/lib/api';
 import { useSocket } from '@/hooks/useSocket';
-import { detectLocale, getTranslation } from '@/lib/i18n';
+import { detectLocale, getTranslation, Locale } from '@/lib/i18n';
 
-function WaitingCountdown({ target }: { target: string }) {
+const G_STR: Record<Locale, {
+  alreadyStarted: string;
+  d: string; h: string; m: string; s: string;
+  loadFailed: string;
+  unavailable: string;
+  unavailableHint: string;
+  toHome: string;
+  refresh: string;
+  lobby: string;
+  lobbyHint: string;
+  scheduledStart: string;
+  connectedPlayers: string;
+  notRegistered: string;
+  notRegisteredHint: string;
+  decisive: string;
+  decisiveHint: string;
+  correctMark: string;
+  notThisTime: string;
+  nextChance: string;
+  yourAnswer: string;
+  noAnswer: string;
+  answerAccepted: string;
+  waitingForReveal: string;
+  correctAnswer: string;
+  nextQuestion: string;
+  player: string;
+  tournamentFinished: string;
+  hostFinished: string;
+  viewResults: string;
+}> = {
+  ru: {
+    alreadyStarted: 'Уже началось!',
+    d: 'д', h: 'ч', m: 'м', s: 'с',
+    loadFailed: 'Не удалось загрузить турнир',
+    unavailable: 'Турнир недоступен',
+    unavailableHint: 'Возможно, турнир уже завершён или был удалён.',
+    toHome: 'На главную',
+    refresh: 'Обновить',
+    lobby: 'Зал ожидания',
+    lobbyHint: 'Уже можно подключаться — админ запустит турнир, когда все игроки будут готовы',
+    scheduledStart: 'Запланированное начало',
+    connectedPlayers: 'Подключённые игроки',
+    notRegistered: 'Вы не зарегистрированы',
+    notRegisteredHint: 'Подайте заявку на главной странице',
+    decisive: '⚡ РЕШАЮЩИЙ ВОПРОС',
+    decisiveHint: 'Всё решится сейчас',
+    correctMark: '★ верный ответ ★',
+    notThisTime: 'Не в этот раз',
+    nextChance: 'Следующий вопрос — твой шанс',
+    yourAnswer: 'Ваш ответ:',
+    noAnswer: '(нет ответа)',
+    answerAccepted: '✓ Твой ответ принят',
+    waitingForReveal: 'Ждём остальных и раскрытия...',
+    correctAnswer: 'Правильный ответ:',
+    nextQuestion: 'Следующий вопрос...',
+    player: 'игрок',
+    tournamentFinished: 'Турнир завершён',
+    hostFinished: 'Ведущий завершил турнир. Спасибо за игру!',
+    viewResults: 'Посмотреть результаты',
+  },
+  en: {
+    alreadyStarted: 'Already started!',
+    d: 'd', h: 'h', m: 'm', s: 's',
+    loadFailed: 'Could not load tournament',
+    unavailable: 'Tournament unavailable',
+    unavailableHint: 'It may have already finished or been removed.',
+    toHome: 'Home',
+    refresh: 'Refresh',
+    lobby: 'Lobby',
+    lobbyHint: 'You can connect — the host will start the tournament when all players are ready',
+    scheduledStart: 'Scheduled start',
+    connectedPlayers: 'Connected players',
+    notRegistered: 'You are not registered',
+    notRegisteredHint: 'Apply on the home page',
+    decisive: '⚡ DECISIVE QUESTION',
+    decisiveHint: 'It all comes down to this',
+    correctMark: '★ correct answer ★',
+    notThisTime: 'Not this time',
+    nextChance: 'The next question is your shot',
+    yourAnswer: 'Your answer:',
+    noAnswer: '(no answer)',
+    answerAccepted: '✓ Your answer is accepted',
+    waitingForReveal: 'Waiting for others and reveal...',
+    correctAnswer: 'Correct answer:',
+    nextQuestion: 'Next question...',
+    player: 'player',
+    tournamentFinished: 'Tournament finished',
+    hostFinished: 'The host has ended the tournament. Thanks for playing!',
+    viewResults: 'View results',
+  },
+  de: {
+    alreadyStarted: 'Bereits gestartet!',
+    d: 'T', h: 'Std', m: 'Min', s: 'Sek',
+    loadFailed: 'Turnier konnte nicht geladen werden',
+    unavailable: 'Turnier nicht verfügbar',
+    unavailableHint: 'Möglicherweise bereits beendet oder gelöscht.',
+    toHome: 'Zur Startseite',
+    refresh: 'Aktualisieren',
+    lobby: 'Lobby',
+    lobbyHint: 'Du kannst dich verbinden — der Host startet das Turnier, wenn alle Spieler bereit sind',
+    scheduledStart: 'Geplanter Start',
+    connectedPlayers: 'Verbundene Spieler',
+    notRegistered: 'Du bist nicht angemeldet',
+    notRegisteredHint: 'Bewirb dich auf der Startseite',
+    decisive: '⚡ ENTSCHEIDENDE FRAGE',
+    decisiveHint: 'Jetzt entscheidet sich alles',
+    correctMark: '★ richtige Antwort ★',
+    notThisTime: 'Diesmal nicht',
+    nextChance: 'Die nächste Frage ist deine Chance',
+    yourAnswer: 'Deine Antwort:',
+    noAnswer: '(keine Antwort)',
+    answerAccepted: '✓ Deine Antwort wurde angenommen',
+    waitingForReveal: 'Warte auf die anderen und die Auflösung...',
+    correctAnswer: 'Richtige Antwort:',
+    nextQuestion: 'Nächste Frage...',
+    player: 'Spieler',
+    tournamentFinished: 'Turnier beendet',
+    hostFinished: 'Der Host hat das Turnier beendet. Danke fürs Mitspielen!',
+    viewResults: 'Ergebnisse ansehen',
+  },
+};
+
+function WaitingCountdown({ target, locale }: { target: string; locale: Locale }) {
+  const gs = G_STR[locale];
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const iv = setInterval(() => setNow(Date.now()), 1000);
@@ -19,11 +142,11 @@ function WaitingCountdown({ target }: { target: string }) {
   const m = Math.floor((diff % 3600000) / 60000);
   const s = Math.floor((diff % 60000) / 1000);
   if (diff === 0) {
-    return <div className="text-2xl font-mono text-green-400 font-bold">Уже началось!</div>;
+    return <div className="text-2xl font-mono text-green-400 font-bold">{gs.alreadyStarted}</div>;
   }
   return (
     <div className="text-3xl font-mono font-bold text-brand-400">
-      {d > 0 && <span>{d}д </span>}
+      {d > 0 && <span>{d}{gs.d} </span>}
       {String(h).padStart(2, '0')}:{String(m).padStart(2, '0')}:{String(s).padStart(2, '0')}
     </div>
   );
@@ -36,6 +159,7 @@ export default function GamePage() {
   const { user, loadUser } = useAuth();
   const locale = detectLocale();
   const t = getTranslation(locale);
+  const gs = G_STR[locale];
 
   const [tournament, setTournament] = useState<any>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -147,7 +271,7 @@ export default function GamePage() {
         setParticipant(myP || null);
       }
     } catch (e: any) {
-      setLoadError(e?.message || 'Не удалось загрузить турнир');
+      setLoadError(e?.message || gs.loadFailed);
     }
   };
 
@@ -222,11 +346,11 @@ export default function GamePage() {
   if (loadError) return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
       <div className="text-5xl mb-4">🏁</div>
-      <div className="text-xl text-white font-semibold mb-2">Турнир недоступен</div>
-      <div className="text-white/50 text-sm mb-6 max-w-md">Возможно, турнир уже завершён или был удалён.</div>
+      <div className="text-xl text-white font-semibold mb-2">{gs.unavailable}</div>
+      <div className="text-white/50 text-sm mb-6 max-w-md">{gs.unavailableHint}</div>
       <div className="flex gap-3">
-        <button onClick={() => router.push('/dashboard')} className="btn-primary">На главную</button>
-        <button onClick={() => { setLoadError(null); loadTournament(); }} className="btn-ghost">Обновить</button>
+        <button onClick={() => router.push('/dashboard')} className="btn-primary">{gs.toHome}</button>
+        <button onClick={() => { setLoadError(null); loadTournament(); }} className="btn-ghost">{gs.refresh}</button>
       </div>
     </div>
   );
@@ -290,14 +414,14 @@ export default function GamePage() {
         {isWaiting && isJoined && (
           <div className="card-glow mb-6 text-center py-10 animate-slide-up">
             <div className="text-5xl mb-3">⏳</div>
-            <div className="text-2xl font-black text-white mb-2">Зал ожидания</div>
+            <div className="text-2xl font-black text-white mb-2">{gs.lobby}</div>
             <div className="text-white/60 text-sm mb-6 max-w-md mx-auto">
-              Уже можно подключаться — админ запустит турнир, когда все игроки будут готовы
+              {gs.lobbyHint}
             </div>
-            <div className="text-white/30 text-xs uppercase tracking-wider mb-2">Запланированное начало</div>
-            {tournament.startAt && <WaitingCountdown target={tournament.startAt} />}
+            <div className="text-white/30 text-xs uppercase tracking-wider mb-2">{gs.scheduledStart}</div>
+            {tournament.startAt && <WaitingCountdown target={tournament.startAt} locale={locale} />}
             <div className="mt-8 pt-6 border-t border-white/[0.05]">
-              <div className="text-white/40 text-xs uppercase tracking-wider mb-3">Подключённые игроки</div>
+              <div className="text-white/40 text-xs uppercase tracking-wider mb-3">{gs.connectedPlayers}</div>
               <div className="flex flex-wrap gap-2 justify-center">
                 {tournament.participants?.filter((p: any) => ['APPROVED','PLAYING'].includes(p.matchStatus)).map((p: any) => (
                   <div key={p.id} className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white/80">
@@ -312,9 +436,9 @@ export default function GamePage() {
         {isWaiting && !isJoined && (
           <div className="card mb-6 text-center py-10 animate-slide-up">
             <div className="text-4xl mb-3">🚫</div>
-            <div className="text-xl font-bold text-white mb-2">Вы не зарегистрированы</div>
-            <div className="text-white/50 text-sm mb-4">Подайте заявку на главной странице</div>
-            <button onClick={() => router.push('/dashboard')} className="btn-secondary text-sm">На главную</button>
+            <div className="text-xl font-bold text-white mb-2">{gs.notRegistered}</div>
+            <div className="text-white/50 text-sm mb-4">{gs.notRegisteredHint}</div>
+            <button onClick={() => router.push('/dashboard')} className="btn-secondary text-sm">{gs.toHome}</button>
           </div>
         )}
 
@@ -342,8 +466,8 @@ export default function GamePage() {
         {/* Decisive question banner — only when player is tied at 11:11 */}
         {isLive && isPlaying && !matchOver && hasQuestion && !myJudgement && isDecisive && (
           <div className="card mb-4 bg-gradient-to-r from-red-500/20 via-amber-500/20 to-red-500/20 border-red-500/40 text-center py-3 animate-pulse">
-            <div className="text-xl sm:text-2xl font-black text-red-400">⚡ РЕШАЮЩИЙ ВОПРОС</div>
-            <div className="text-xs text-white/60 mt-1">Всё решится сейчас</div>
+            <div className="text-xl sm:text-2xl font-black text-red-400">{gs.decisive}</div>
+            <div className="text-xs text-white/60 mt-1">{gs.decisiveHint}</div>
           </div>
         )}
 
@@ -379,11 +503,12 @@ export default function GamePage() {
               </div>
             ) : (
               <div className="text-center py-6">
-                <p className="text-white/50 text-sm mb-2">Your answer:</p>
-                <p className="text-white text-2xl font-bold mb-4">{answer.trim() || '(no answer)'}</p>
-                <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-2xl px-4 py-2">
-                  <div className="w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
-                  <span className="text-amber-400 text-sm">Checking...</span>
+                <div className="text-3xl mb-3">✓</div>
+                <p className="text-white/50 text-sm mb-1">{gs.answerAccepted}</p>
+                <p className="text-white text-2xl font-bold mb-4">{answer.trim() || gs.noAnswer}</p>
+                <div className="inline-flex items-center gap-2 bg-white/[0.03] border border-white/10 rounded-2xl px-4 py-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-white/60 text-sm">{gs.waitingForReveal}</span>
                 </div>
               </div>
             )}
@@ -416,28 +541,28 @@ export default function GamePage() {
                   {t.game.correct}
                 </div>
                 <div className="text-green-400/60 text-xs uppercase tracking-[0.2em] font-semibold">
-                  ★ верный ответ ★
+                  {gs.correctMark}
                 </div>
               </div>
             ) : (
               <div className="relative">
                 <div className="text-5xl mb-4 opacity-80">💡</div>
                 <div className="text-2xl font-bold mb-1 text-white/90">
-                  Не в этот раз
+                  {gs.notThisTime}
                 </div>
                 <div className="text-white/40 text-xs">
-                  Следующий вопрос — твой шанс
+                  {gs.nextChance}
                 </div>
               </div>
             )}
 
             <div className="relative mt-6 space-y-2">
               <div className="text-white/40 text-sm">
-                Ваш ответ: <span className="text-white font-semibold">{answer.trim() || '(нет ответа)'}</span>
+                {gs.yourAnswer} <span className="text-white font-semibold">{answer.trim() || gs.noAnswer}</span>
               </div>
               {myJudgement.correctAnswer && (
                 <div className="text-white/40 text-sm">
-                  Правильный ответ: <span className={myJudgement.decision === 'ACCEPTED' ? 'text-green-300 font-semibold' : 'text-amber-300 font-semibold'}>{myJudgement.correctAnswer}</span>
+                  {gs.correctAnswer} <span className={myJudgement.decision === 'ACCEPTED' ? 'text-green-300 font-semibold' : 'text-amber-300 font-semibold'}>{myJudgement.correctAnswer}</span>
                 </div>
               )}
               {answerImagesForReveal.length > 0 && (
@@ -453,7 +578,7 @@ export default function GamePage() {
             </div>
             <div className="relative mt-6 text-white/20 text-xs">
               <div className="flex justify-center mt-3"><div className="w-5 h-5 border-2 border-white/20 border-t-transparent rounded-full animate-spin" /></div>
-              <p className="mt-2">Следующий вопрос...</p>
+              <p className="mt-2">{gs.nextQuestion}</p>
             </div>
           </div>
         )}
@@ -464,7 +589,7 @@ export default function GamePage() {
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-white/50">{t.nav.leaderboard}</h3>
               <div className="text-[10px] uppercase tracking-wider text-white/30 font-mono">
-                <span className="text-white/50">игрок</span>
+                <span className="text-white/50">{gs.player}</span>
                 <span className="text-white/20 mx-1">:</span>
                 <span className="text-brand-400 font-semibold">30sec.</span>
               </div>
@@ -495,22 +620,22 @@ export default function GamePage() {
         <div className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-dark-800 border border-white/10 rounded-3xl max-w-md w-full p-8 text-center animate-slide-up">
             <div className="text-6xl mb-4">🏁</div>
-            <h2 className="text-2xl font-black text-white mb-2">Турнир завершён</h2>
+            <h2 className="text-2xl font-black text-white mb-2">{gs.tournamentFinished}</h2>
             <p className="text-white/50 text-sm mb-6">
-              Ведущий завершил турнир. Спасибо за игру!
+              {gs.hostFinished}
             </p>
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => router.push(`/watch/${tournamentId}`)}
                 className="btn-primary w-full"
               >
-                Посмотреть результаты
+                {gs.viewResults}
               </button>
               <button
                 onClick={() => router.push('/dashboard')}
                 className="btn-ghost w-full"
               >
-                На главную
+                {gs.toHome}
               </button>
             </div>
           </div>

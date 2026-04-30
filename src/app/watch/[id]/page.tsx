@@ -5,7 +5,73 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/store';
 import { api } from '@/lib/api';
 import { useSocket } from '@/hooks/useSocket';
-import { detectLocale, getTranslation } from '@/lib/i18n';
+import { detectLocale, getTranslation, Locale } from '@/lib/i18n';
+
+const W_STR: Record<Locale, {
+  yourAnswerForYou: string;
+  timeUp: string;
+  correctAnswer: string;
+  waitingQuestion: string;
+  waitingQuestionHint: string;
+  notStartedYet: string;
+  reaction: string;
+  noParticipants: string;
+  info: string;
+  type: string;
+  players: string;
+  questions: string;
+  status: string;
+  tournamentFinished: string;
+}> = {
+  ru: {
+    yourAnswerForYou: 'Ваш ответ (для себя)',
+    timeUp: 'Время вышло',
+    correctAnswer: 'Правильный ответ',
+    waitingQuestion: 'Ожидание вопроса...',
+    waitingQuestionHint: 'Ведущий скоро запустит следующий вопрос',
+    notStartedYet: 'Турнир ещё не начался',
+    reaction: 'Реакция:',
+    noParticipants: 'Нет участников',
+    info: 'Информация',
+    type: 'Тип',
+    players: 'Игроки',
+    questions: 'Вопросы',
+    status: 'Статус',
+    tournamentFinished: 'Турнир завершён',
+  },
+  en: {
+    yourAnswerForYou: 'Your answer (for yourself)',
+    timeUp: 'Time up',
+    correctAnswer: 'Correct answer',
+    waitingQuestion: 'Waiting for question...',
+    waitingQuestionHint: 'The host will start the next question soon',
+    notStartedYet: 'Tournament has not started yet',
+    reaction: 'Reaction:',
+    noParticipants: 'No participants',
+    info: 'Info',
+    type: 'Type',
+    players: 'Players',
+    questions: 'Questions',
+    status: 'Status',
+    tournamentFinished: 'Tournament finished',
+  },
+  de: {
+    yourAnswerForYou: 'Deine Antwort (für dich)',
+    timeUp: 'Zeit abgelaufen',
+    correctAnswer: 'Richtige Antwort',
+    waitingQuestion: 'Warten auf Frage...',
+    waitingQuestionHint: 'Der Host startet gleich die nächste Frage',
+    notStartedYet: 'Turnier hat noch nicht begonnen',
+    reaction: 'Reaktion:',
+    noParticipants: 'Keine Teilnehmer',
+    info: 'Info',
+    type: 'Typ',
+    players: 'Spieler',
+    questions: 'Fragen',
+    status: 'Status',
+    tournamentFinished: 'Turnier beendet',
+  },
+};
 
 const REACTIONS = [
   { code: 'like', emoji: '👍' },
@@ -21,6 +87,7 @@ export default function WatchPage() {
   const { user, loadUser } = useAuth();
   const locale = detectLocale();
   const t = getTranslation(locale);
+  const wt = W_STR[locale];
 
   const [liveState, setLiveState] = useState<any>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -255,7 +322,7 @@ export default function WatchPage() {
                 {/* Spectator personal answer */}
                 {user && !isLocked && !myAnswerSaved && (
                   <div>
-                    <p className="text-[10px] uppercase text-white/20 tracking-wider mb-2">Ваш ответ (для себя)</p>
+                    <p className="text-[10px] uppercase text-white/20 tracking-wider mb-2">{wt.yourAnswerForYou}</p>
                     <div className="flex gap-2">
                       <input
                         type="text"
@@ -282,7 +349,7 @@ export default function WatchPage() {
 
                 {isLocked && !myAnswerSaved && (
                   <div className="bg-white/[0.03] rounded-2xl p-3 text-center">
-                    <span className="text-white/30 text-sm">Время вышло</span>
+                    <span className="text-white/30 text-sm">{wt.timeUp}</span>
                   </div>
                 )}
 
@@ -291,7 +358,7 @@ export default function WatchPage() {
                 {revealedAnswer && (
                   <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/[0.10] via-emerald-500/[0.04] to-transparent p-4 text-center animate-fade-in">
                     <div className="text-2xl mb-1">🎯</div>
-                    <div className="text-[10px] uppercase tracking-[0.2em] text-emerald-300/70 mb-1">Правильный ответ</div>
+                    <div className="text-[10px] uppercase tracking-[0.2em] text-emerald-300/70 mb-1">{wt.correctAnswer}</div>
                     <div className="text-lg font-bold text-white">{revealedAnswer}</div>
                     {myAnswerSaved && myAnswer && (
                       <div className="text-[11px] text-white/40 mt-2">
@@ -304,8 +371,8 @@ export default function WatchPage() {
             ) : liveState?.status === 'LIVE' ? (
               <div className="card text-center py-16 animate-fade-in">
                 <div className="text-5xl mb-4 animate-float">⏳</div>
-                <p className="text-white/40 text-lg">Ожидание вопроса...</p>
-                <p className="text-white/20 text-sm mt-1">Ведущий скоро запустит следующий вопрос</p>
+                <p className="text-white/40 text-lg">{wt.waitingQuestion}</p>
+                <p className="text-white/20 text-sm mt-1">{wt.waitingQuestionHint}</p>
               </div>
             ) : liveState?.status === 'FINISHED' ? (
               <div className="card text-center py-16 animate-fade-in">
@@ -315,14 +382,14 @@ export default function WatchPage() {
             ) : (
               <div className="card text-center py-16">
                 <div className="text-5xl mb-4 opacity-30">🏆</div>
-                <p className="text-white/30">Турнир ещё не начался</p>
+                <p className="text-white/30">{wt.notStartedYet}</p>
               </div>
             )}
 
             {/* Reactions */}
             {questionData && user && (
               <div className="flex items-center gap-2 animate-fade-in">
-                <span className="text-white/20 text-xs mr-1">Реакция:</span>
+                <span className="text-white/20 text-xs mr-1">{wt.reaction}</span>
                 {REACTIONS.map((r) => {
                   const count = reactionCounts.find((rc) => rc.code === r.code)?.count || 0;
                   const isSelected = selectedReaction === r.code;
@@ -355,7 +422,7 @@ export default function WatchPage() {
               </h3>
 
               {liveState?.participants?.length === 0 ? (
-                <p className="text-white/20 text-sm text-center py-4">Нет участников</p>
+                <p className="text-white/20 text-sm text-center py-4">{wt.noParticipants}</p>
               ) : (
                 <div className="space-y-1.5">
                   {liveState?.participants
@@ -410,22 +477,22 @@ export default function WatchPage() {
 
             {/* Tournament info */}
             <div className="card">
-              <h3 className="text-sm font-semibold text-white/50 mb-3">Информация</h3>
+              <h3 className="text-sm font-semibold text-white/50 mb-3">{wt.info}</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-white/30">Тип</span>
+                  <span className="text-white/30">{wt.type}</span>
                   <span className="text-white/60">{liveState?.type}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/30">Игроки</span>
+                  <span className="text-white/30">{wt.players}</span>
                   <span className="text-white/60">{liveState?.playersCount || 0}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/30">Вопросы</span>
+                  <span className="text-white/30">{wt.questions}</span>
                   <span className="text-white/60">{liveState?.questionsProgress?.used || 0} / {liveState?.questionsProgress?.total || 0}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/30">Статус</span>
+                  <span className="text-white/30">{wt.status}</span>
                   <span className={liveState?.status === 'LIVE' ? 'text-red-400 font-semibold' : 'text-white/60'}>
                     {liveState?.status}
                   </span>
@@ -454,7 +521,7 @@ export default function WatchPage() {
         <div className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-dark-800 border border-white/10 rounded-3xl max-w-md w-full p-8 text-center animate-slide-up">
             <div className="text-6xl mb-4">🏁</div>
-            <h2 className="text-2xl font-black text-white mb-2">Турнир завершён</h2>
+            <h2 className="text-2xl font-black text-white mb-2">{wt.tournamentFinished}</h2>
             <p className="text-white/50 text-sm mb-6">
               Спасибо что были с нами!
             </p>
