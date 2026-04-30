@@ -4,6 +4,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import TrackingPing from '@/components/TrackingPing';
 import CookieBanner from '@/components/CookieBanner';
 import FeedbackButton from '@/components/FeedbackButton';
+import LiveBanner from '@/components/LiveBanner';
 
 export const metadata: Metadata = {
   title: '30sec. — Intellectual Tournament',
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <TrackingPing />
         <CookieBanner />
         <FeedbackButton />
+        <LiveBanner />
         <ErrorBoundary>{children}</ErrorBoundary>
       </body>
     </html>
