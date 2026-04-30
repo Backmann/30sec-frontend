@@ -6,6 +6,7 @@ import AchievementsGrid from '@/components/AchievementsGrid';
 import ActivityHeatmap from '@/components/ActivityHeatmap';
 import WeeklyChart from '@/components/WeeklyChart';
 import { detectLocale, Locale } from '@/lib/i18n';
+import { rankTitle } from '@/lib/ranks';
 
 const PL_STR: Record<Locale, {
   notFound: string;
@@ -172,7 +173,7 @@ export default function PlayerPage() {
             )}
             {player.rank && (
               <span className="px-2.5 py-1 rounded-lg bg-accent-500/10 text-accent-400 text-xs font-semibold">
-                {player.rank.icon} {player.rank.title}
+                {player.rank.icon} {rankTitle(player.rank, locale)}
               </span>
             )}
           </div>
@@ -202,13 +203,13 @@ export default function PlayerPage() {
                 {player.rankProgress.current && (
                   <span className="text-2xl">{player.rankProgress.current.icon}</span>
                 )}
-                <span className="text-white font-semibold">{player.rankProgress.current?.title || pl.noRank}</span>
+                <span className="text-white font-semibold">{rankTitle(player.rankProgress.current, locale) || pl.noRank}</span>
               </div>
               {player.rankProgress.next && (
                 <div className="flex items-center gap-2 text-sm">
                   <span className="text-white/50">→</span>
                   <span className="text-2xl opacity-60">{player.rankProgress.next.icon}</span>
-                  <span className="text-white/70">{player.rankProgress.next.title}</span>
+                  <span className="text-white/70">{rankTitle(player.rankProgress.next, locale)}</span>
                 </div>
               )}
             </div>
@@ -220,7 +221,7 @@ export default function PlayerPage() {
             </div>
             <div className="text-xs text-white/50 mt-2">
               {player.rankProgress.next
-                ? pl.toNextRank.replace('{n}', String(player.rankProgress.toNext)).replace('{rank}', player.rankProgress.next.title)
+                ? pl.toNextRank.replace('{n}', String(player.rankProgress.toNext)).replace('{rank}', rankTitle(player.rankProgress.next, locale))
                 : pl.maxRank
               }
             </div>

@@ -9,6 +9,7 @@ import AchievementsGrid from '@/components/AchievementsGrid';
 import ActivityHeatmap from '@/components/ActivityHeatmap';
 import WeeklyChart from '@/components/WeeklyChart';
 import { detectLocale, getTranslation, Locale } from '@/lib/i18n';
+import { rankTitle } from '@/lib/ranks';
 
 const P_STR: Record<Locale, {
   saved: string;
@@ -498,13 +499,13 @@ export default function ProfilePage() {
                     {rankProgress.current && (
                       <span className="text-2xl">{rankProgress.current.icon}</span>
                     )}
-                    <span className="text-white font-semibold">{rankProgress.current?.title || pt.noRank}</span>
+                    <span className="text-white font-semibold">{rankTitle(rankProgress.current, locale) || pt.noRank}</span>
                   </div>
                   {rankProgress.next && (
                     <div className="flex items-center gap-2 text-sm">
                       <span className="text-white/50">→</span>
                       <span className="text-2xl opacity-60">{rankProgress.next.icon}</span>
-                      <span className="text-white/70">{rankProgress.next.title}</span>
+                      <span className="text-white/70">{rankTitle(rankProgress.next, locale)}</span>
                     </div>
                   )}
                 </div>
@@ -516,7 +517,7 @@ export default function ProfilePage() {
                 </div>
                 <div className="text-xs text-white/50 mt-2">
                   {rankProgress.next
-                    ? pt.toNextRank.replace('{n}', String(rankProgress.toNext)).replace('{rank}', rankProgress.next.title)
+                    ? pt.toNextRank.replace('{n}', String(rankProgress.toNext)).replace('{rank}', rankTitle(rankProgress.next, locale))
                     : pt.maxRank}
                 </div>
               </div>

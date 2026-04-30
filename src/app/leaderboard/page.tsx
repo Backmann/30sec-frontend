@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/store';
 import { api } from '@/lib/api';
 import { detectLocale, getTranslation, Locale } from '@/lib/i18n';
+import { rankTitle } from '@/lib/ranks';
 
 const LB_STR: Record<Locale, {
   topPlayers: string;
@@ -206,7 +207,7 @@ export default function LeaderboardPage() {
                     <div className="flex items-center gap-4">
                       <div className="text-3xl">{rank.icon}</div>
                       <div>
-                        <h3 className="text-white font-bold">{rank.title}</h3>
+                        <h3 className="text-white font-bold">{rankTitle(rank, locale)}</h3>
                         <p className="text-white/30 text-xs mt-0.5">{lt.fromCorrectAnswers.replace('{n}', String(rank.thresholdCorrectAnswers))}</p>
                       </div>
                     </div>
