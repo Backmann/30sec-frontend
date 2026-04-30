@@ -128,7 +128,7 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-2">
-          {(['ru', 'de', 'en'] as const).map((lang) => (
+          {(['en', 'de', 'ru'] as const).map((lang) => (
             <button
               key={lang}
               onClick={() => switchLocale(lang)}
