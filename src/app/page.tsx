@@ -8,22 +8,22 @@ import { detectLocale, getTranslation, Locale } from '@/lib/i18n';
 
 const STEPS_BY_LOCALE: Record<Locale, { title: string; desc: string }[]> = {
   ru: [
-    { title: 'Подай заявку', desc: 'Записывайся на ближайший турнир. Админ одобряет участников за пару минут.' },
-    { title: 'Зайди в зал ожидания', desc: 'За 5 минут до старта откроется кнопка. Все игроки собираются вместе.' },
-    { title: 'Играй 23 раунда', desc: 'Один вопрос. 30 секунд. Один ответ. Без подсказок и без права на ошибку дольше 12 раз.' },
-    { title: 'Поднимайся в рейтинге', desc: 'Победил — очки идут в твой ранг. Прогресс виден, цели понятны.' },
+    { title: 'Подай заявку', desc: 'Запишись на ближайший турнир. Админ одобрит твою заявку до старта.' },
+    { title: 'Зайди в зал ожидания', desc: 'За 5 минут до начала откроется кнопка входа. Все игроки заходят вместе.' },
+    { title: 'Играй', desc: 'Один вопрос. 30 секунд. Один ответ. Без подсказок.' },
+    { title: 'Поднимайся в рейтинге', desc: 'Каждая победа — очки в твой ранг. Прогресс виден, цели понятны.' },
   ],
   en: [
-    { title: 'Apply', desc: 'Sign up for the next tournament. The host approves players within minutes.' },
-    { title: 'Enter the lobby', desc: 'A button appears 5 minutes before kickoff. All players gather together.' },
-    { title: 'Play 23 rounds', desc: 'One question. 30 seconds. One answer. No hints, and you can\'t miss more than 12.' },
-    { title: 'Climb the ranks', desc: 'Win and your points go into your rank. Clear progress, clear goals.' },
+    { title: 'Apply', desc: 'Sign up for the next tournament. The host will approve your entry before kickoff.' },
+    { title: 'Enter the lobby', desc: 'A button appears 5 minutes before start. All players go in together.' },
+    { title: 'Play', desc: 'One question. 30 seconds. One answer. No hints.' },
+    { title: 'Climb the ranks', desc: 'Every win adds points to your rank. Clear progress, clear goals.' },
   ],
   de: [
-    { title: 'Bewerben', desc: 'Melde dich für das nächste Turnier an. Der Host genehmigt Spieler in wenigen Minuten.' },
-    { title: 'In die Lobby', desc: '5 Minuten vor Start erscheint der Button. Alle Spieler kommen zusammen.' },
-    { title: '23 Runden spielen', desc: 'Eine Frage. 30 Sekunden. Eine Antwort. Keine Tipps, max. 12 Fehlversuche.' },
-    { title: 'Im Ranking aufsteigen', desc: 'Sieg bringt Punkte für deinen Rang. Klarer Fortschritt, klare Ziele.' },
+    { title: 'Bewerben', desc: 'Melde dich für das nächste Turnier an. Der Host genehmigt deine Anmeldung vor dem Start.' },
+    { title: 'In die Lobby', desc: '5 Minuten vor Start erscheint der Button. Alle Spieler kommen gemeinsam rein.' },
+    { title: 'Spiel', desc: 'Eine Frage. 30 Sekunden. Eine Antwort. Keine Hinweise.' },
+    { title: 'Im Ranking aufsteigen', desc: 'Jeder Sieg bringt Punkte für deinen Rang. Klarer Fortschritt, klare Ziele.' },
   ],
 };
 
@@ -192,20 +192,31 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="mt-20 flex gap-12 sm:gap-16 justify-center animate-slide-up"
+        {/* Value pillars — words instead of numbers. Numbers (12, 23, etc.)
+            were technically misleading on the hero; words capture the
+            essence of the format without forcing the visitor to do math. */}
+        <div className="mt-20 flex gap-10 sm:gap-16 justify-center animate-slide-up"
           style={{ animationDelay: '0.4s', animationFillMode: 'both' }}>
           {[
-            { value: '30', label: locale === 'de' ? 'Sekunden' : locale === 'en' ? 'seconds' : 'секунд' },
-            { value: '12', label: locale === 'de' ? 'Punkte' : locale === 'en' ? 'points' : 'очков' },
-            { value: '1', label: locale === 'de' ? 'Antwort' : locale === 'en' ? 'answer' : 'ответ' },
-          ].map((stat) => (
-            <div key={stat.label} className="text-center group">
-              <div className="text-3xl sm:text-4xl font-black font-mono text-white/70 group-hover:text-brand-400 transition-colors duration-500">
-                {stat.value}
+            {
+              top: locale === 'de' ? 'Schnell' : locale === 'en' ? 'Fast' : 'Быстро',
+              sub: locale === 'de' ? '30 Sekunden' : locale === 'en' ? '30 seconds' : '30 секунд',
+            },
+            {
+              top: locale === 'de' ? 'Fair' : locale === 'en' ? 'Fair' : 'Честно',
+              sub: locale === 'de' ? 'Ohne Hinweise' : locale === 'en' ? 'No hints' : 'Без подсказок',
+            },
+            {
+              top: locale === 'de' ? 'Gemeinsam' : locale === 'en' ? 'Together' : 'Вместе',
+              sub: locale === 'de' ? 'Live-Turnier' : locale === 'en' ? 'Live tournament' : 'Live-турнир',
+            },
+          ].map((pillar) => (
+            <div key={pillar.top} className="text-center group">
+              <div className="text-xl sm:text-2xl font-bold text-white/70 group-hover:text-brand-400 transition-colors duration-500 tracking-wide">
+                {pillar.top}
               </div>
               <div className="text-[10px] sm:text-xs uppercase tracking-[0.2em] text-white/25 mt-1.5 font-medium">
-                {stat.label}
+                {pillar.sub}
               </div>
             </div>
           ))}
