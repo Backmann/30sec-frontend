@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { detectLocale, Locale } from '@/lib/i18n';
 
 /**
  * Smart CTA for a tournament card.
@@ -15,6 +16,90 @@ import { useRouter } from 'next/navigation';
  */
 
 const LOBBY_OPENS_MS = 5 * 60 * 1000; // 5 minutes before start
+
+const STR: Record<Locale, {
+  startsNow: string;
+  d: string; h: string; m: string; s: string;
+  judgeTournament: string; viewResults: string; manageTournament: string;
+  watchFinal: string; enterGame: string; watchNow: string;
+  win: string; loss: string; finishedShort: string;
+  apply: string;
+  emailVerifyNeeded: string; verifyEmail: string; watchWhenLive: string;
+  pending: string;
+  approved: string; startsAt: string;
+  enterLobby: string;
+  rejected: string;
+}> = {
+  ru: {
+    startsNow: 'Вот-вот стартует!',
+    d: 'дн', h: 'час', m: 'мин', s: 'сек',
+    judgeTournament: '⚙️ Судить турнир', viewResults: 'Посмотреть результаты', manageTournament: '⚙️ Управлять турниром',
+    watchFinal: 'Смотреть финал турнира', enterGame: '🔴 Войти в игру', watchNow: '🔴 Смотреть сейчас',
+    win: '🏆 Победа!', loss: 'Поражение', finishedShort: 'Завершено',
+    apply: 'Подать заявку',
+    emailVerifyNeeded: '✉ Подтверди email чтобы играть', verifyEmail: 'Подтвердить email', watchWhenLive: 'Смотреть когда начнётся',
+    pending: '⏳ Заявка на рассмотрении',
+    approved: 'Заявка одобрена. Старт в', startsAt: 'Старт в',
+    enterLobby: 'Войти в зал ожидания',
+    rejected: 'Заявка отклонена',
+  },
+  en: {
+    startsNow: 'Starting now!',
+    d: 'd', h: 'h', m: 'min', s: 'sec',
+    judgeTournament: '⚙️ Judge tournament', viewResults: 'View results', manageTournament: '⚙️ Manage tournament',
+    watchFinal: 'Watch the final', enterGame: '🔴 Enter game', watchNow: '🔴 Watch now',
+    win: '🏆 Victory!', loss: 'Defeat', finishedShort: 'Finished',
+    apply: 'Apply',
+    emailVerifyNeeded: '✉ Verify your email to play', verifyEmail: 'Verify email', watchWhenLive: 'Watch when it starts',
+    pending: '⏳ Application pending',
+    approved: 'Approved. Starts at', startsAt: 'Starts at',
+    enterLobby: 'Enter the lobby',
+    rejected: 'Application rejected',
+  },
+  de: {
+    startsNow: 'Startet gleich!',
+    d: 'T', h: 'Std', m: 'Min', s: 'Sek',
+    judgeTournament: '⚙️ Turnier leiten', viewResults: 'Ergebnisse ansehen', manageTournament: '⚙️ Turnier verwalten',
+    watchFinal: 'Finale ansehen', enterGame: '🔴 Spiel betreten', watchNow: '🔴 Jetzt zuschauen',
+    win: '🏆 Sieg!', loss: 'Niederlage', finishedShort: 'Beendet',
+    apply: 'Bewerben',
+    emailVerifyNeeded: '✉ E-Mail bestätigen zum Spielen', verifyEmail: 'E-Mail bestätigen', watchWhenLive: 'Beim Start zuschauen',
+    pending: '⏳ Bewerbung wird geprüft',
+    approved: 'Genehmigt. Start um', startsAt: 'Start um',
+    enterLobby: 'In die Lobby',
+    rejected: 'Bewerbung abgelehnt',
+  },
+};
+
+const STR_EXTRAS: Record<Locale, {
+  approvedShort: string;
+  startTimeHint: string;
+  soon: string;
+  rejectedX: string;
+  enterLobbyEmoji: string;
+}> = {
+  ru: {
+    approvedShort: '✓ Заявка одобрена',
+    startTimeHint: 'Кнопка «Войти» появится за 5 минут до начала.',
+    soon: 'скоро',
+    rejectedX: '✗ Заявка отклонена',
+    enterLobbyEmoji: '🟢 Войти в зал ожидания',
+  },
+  en: {
+    approvedShort: '✓ Application approved',
+    startTimeHint: 'The "Enter" button appears 5 minutes before start.',
+    soon: 'soon',
+    rejectedX: '✗ Application rejected',
+    enterLobbyEmoji: '🟢 Enter the lobby',
+  },
+  de: {
+    approvedShort: '✓ Bewerbung angenommen',
+    startTimeHint: 'Der "Betreten"-Button erscheint 5 Minuten vor Start.',
+    soon: 'bald',
+    rejectedX: '✗ Bewerbung abgelehnt',
+    enterLobbyEmoji: '🟢 In die Lobby',
+  },
+};
 
 type Participant = {
   userId: string;
@@ -61,28 +146,31 @@ function formatCountdown(ms: number): { d: number; h: number; m: number; s: numb
 /** Big visible countdown for upcoming tournament header. */
 export function TournamentCountdown({ target }: { target: string }) {
   const now = useNow(1000);
+  const [locale, setLocale] = useState<Locale>('ru');
+  useEffect(() => { setLocale(detectLocale()); }, []);
+  const t = STR[locale];
   const diff = Math.max(0, new Date(target).getTime() - now);
-  if (diff <= 0) return <span className="text-green-400 text-sm font-semibold animate-pulse">Вот-вот стартует!</span>;
+  if (diff <= 0) return <span className="text-green-400 text-sm font-semibold animate-pulse">{t.startsNow}</span>;
   const { d, h, m, s } = formatCountdown(diff);
   return (
     <div className="flex gap-2 text-center">
       {d > 0 && (
         <div className="bg-white/[0.04] rounded-xl px-2.5 py-1.5">
           <div className="text-lg font-black font-mono text-brand-400">{d}</div>
-          <div className="text-[9px] text-white/25 uppercase">дн</div>
+          <div className="text-[9px] text-white/25 uppercase">{t.d}</div>
         </div>
       )}
       <div className="bg-white/[0.04] rounded-xl px-2.5 py-1.5">
         <div className="text-lg font-black font-mono text-brand-400">{String(h).padStart(2, '0')}</div>
-        <div className="text-[9px] text-white/25 uppercase">час</div>
+        <div className="text-[9px] text-white/25 uppercase">{t.h}</div>
       </div>
       <div className="bg-white/[0.04] rounded-xl px-2.5 py-1.5">
         <div className="text-lg font-black font-mono text-accent-400">{String(m).padStart(2, '0')}</div>
-        <div className="text-[9px] text-white/25 uppercase">мин</div>
+        <div className="text-[9px] text-white/25 uppercase">{t.m}</div>
       </div>
       <div className="bg-white/[0.04] rounded-xl px-2.5 py-1.5">
         <div className="text-lg font-black font-mono text-white/50">{String(s).padStart(2, '0')}</div>
-        <div className="text-[9px] text-white/25 uppercase">сек</div>
+        <div className="text-[9px] text-white/25 uppercase">{t.s}</div>
       </div>
     </div>
   );
@@ -106,6 +194,9 @@ export function TournamentCountdown({ target }: { target: string }) {
 export default function TournamentCardCTA({ tr, user, onApply, compact = false }: Props) {
   const router = useRouter();
   const now = useNow(1000);
+  const [locale, setLocale] = useState<Locale>('ru');
+  useEffect(() => { setLocale(detectLocale()); }, []);
+  const t = STR[locale];
 
   const isAdmin = !!user && (user.role === 'ADMIN' || user.role === 'SUPERADMIN');
   const my = user ? tr.participants?.find((p) => p.userId === user.id) : undefined;
@@ -124,20 +215,20 @@ export default function TournamentCardCTA({ tr, user, onApply, compact = false }
     if (tr.status === 'LIVE') {
       return (
         <button onClick={goAdmin} className="btn-primary w-full text-center text-sm">
-          ⚙️ Судить турнир
+          {t.judgeTournament}
         </button>
       );
     }
     if (tr.status === 'FINISHED') {
       return (
         <button onClick={goWatch} className="btn-secondary w-full text-center text-sm">
-          Посмотреть результаты
+          {t.viewResults}
         </button>
       );
     }
     return (
       <button onClick={goAdmin} className="btn-secondary w-full text-center text-sm">
-        ⚙️ Управлять турниром
+        {t.manageTournament}
       </button>
     );
   }
@@ -146,7 +237,7 @@ export default function TournamentCardCTA({ tr, user, onApply, compact = false }
   if (tr.status === 'FINISHED') {
     return (
       <button onClick={goWatch} className="btn-secondary w-full text-center text-sm">
-        Посмотреть результаты
+        {t.viewResults}
       </button>
     );
   }
@@ -160,16 +251,16 @@ export default function TournamentCardCTA({ tr, user, onApply, compact = false }
         : ms === 'LOST' ? 'bg-red-500/10 border-red-500/20 text-red-400'
         : 'bg-white/5 border-white/10 text-white/60';
       const label =
-        ms === 'WON' ? `🏆 Победа! (${score})`
-        : ms === 'LOST' ? `Поражение (${score})`
-        : `Завершено (${score})`;
+        ms === 'WON' ? `${t.win} (${score})`
+        : ms === 'LOST' ? `${t.loss} (${score})`
+        : `${t.finishedShort} (${score})`;
       return (
         <div className="space-y-2">
           <div className={`w-full text-center text-sm border rounded-2xl py-3 ${palette}`}>
             {label}
           </div>
           <button onClick={goWatch} className="btn-primary w-full text-center text-sm">
-            Смотреть финал турнира
+            {t.watchFinal}
           </button>
         </div>
       );
@@ -177,17 +268,19 @@ export default function TournamentCardCTA({ tr, user, onApply, compact = false }
     if (ms === 'APPROVED' || ms === 'PLAYING') {
       return (
         <button onClick={goGame} className="btn-primary w-full text-center text-sm animate-pulse">
-          🔴 Войти в игру
+          {t.enterGame}
         </button>
       );
     }
     // Spectator (no participant or rejected)
     return (
       <button onClick={goWatch} className="btn-primary w-full text-center text-sm">
-        🔴 Смотреть сейчас
+        {t.watchNow}
       </button>
     );
   }
+
+  const tEx = STR_EXTRAS[locale];
 
   // ───── SCHEDULED / DRAFT ─────
   if (!my) {
@@ -197,20 +290,20 @@ export default function TournamentCardCTA({ tr, user, onApply, compact = false }
       return (
         <div className="space-y-2">
           <div className="w-full text-center text-sm bg-amber-500/10 border border-amber-500/20 rounded-2xl py-3 text-amber-300">
-            ✉ Подтверди email чтобы играть
+            {t.emailVerifyNeeded}
           </div>
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={(e) => { e.stopPropagation(); router.push('/profile'); }}
               className="btn-primary text-center text-xs py-2.5"
             >
-              Подтвердить email
+              {t.verifyEmail}
             </button>
             <button
               onClick={goWatch}
               className="btn-secondary text-center text-xs py-2.5"
             >
-              Смотреть когда начнётся
+              {t.watchWhenLive}
             </button>
           </div>
         </div>
@@ -221,7 +314,7 @@ export default function TournamentCardCTA({ tr, user, onApply, compact = false }
         onClick={(e) => { e.stopPropagation(); onApply?.(tr.id); }}
         className="btn-primary w-full text-center text-sm"
       >
-        Подать заявку
+        {t.apply}
       </button>
     );
   }
@@ -229,7 +322,7 @@ export default function TournamentCardCTA({ tr, user, onApply, compact = false }
   if (ms === 'PENDING') {
     return (
       <div className="w-full text-center text-sm bg-amber-500/10 border border-amber-500/20 rounded-2xl py-3 text-amber-400">
-        ⏳ Заявка на рассмотрении
+        {t.pending}
       </div>
     );
   }
@@ -238,10 +331,10 @@ export default function TournamentCardCTA({ tr, user, onApply, compact = false }
     return (
       <div className="space-y-2">
         <div className="w-full text-center text-sm bg-red-500/10 border border-red-500/20 rounded-2xl py-3 text-red-400">
-          ✗ Заявка отклонена
+          {tEx.rejectedX}
         </div>
         <button onClick={goWatch} className="btn-secondary w-full text-center text-sm">
-          Смотреть когда начнётся
+          {t.watchWhenLive}
         </button>
       </div>
     );
@@ -251,21 +344,22 @@ export default function TournamentCardCTA({ tr, user, onApply, compact = false }
     if (lobbyOpen) {
       return (
         <button onClick={goGame} className="btn-primary w-full text-center text-sm animate-pulse">
-          🟢 Войти в зал ожидания
+          {tEx.enterLobbyEmoji}
         </button>
       );
     }
     // Show the start time as a soft info-state — no button.
+    const localeMap: Record<Locale, string> = { ru: 'ru-RU', en: 'en-GB', de: 'de-DE' };
     const startStr = startMs
-      ? new Date(startMs).toLocaleString('ru-RU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
-      : 'скоро';
+      ? new Date(startMs).toLocaleString(localeMap[locale], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+      : tEx.soon;
     return (
       <div className="space-y-1.5">
         <div className="w-full text-center text-sm bg-green-500/10 border border-green-500/20 rounded-2xl py-3 text-green-400">
-          ✓ Заявка одобрена
+          {tEx.approvedShort}
         </div>
         <div className="text-center text-xs text-white/50">
-          Старт {startStr}. Кнопка «Войти» появится за 5 минут до начала.
+          {t.startsAt} {startStr}. {tEx.startTimeHint}
         </div>
       </div>
     );

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { detectLocale, Locale } from '@/lib/i18n';
 
 interface ActiveTournament {
   id: string;
@@ -9,6 +10,12 @@ interface ActiveTournament {
   type: string;
   playersCount: number;
 }
+
+const STR: Record<Locale, { live: string; running: string; watch: string; hide: string }> = {
+  ru: { live: 'LIVE', running: 'Идёт турнир — ',  watch: 'Смотреть →', hide: 'Скрыть' },
+  en: { live: 'LIVE', running: 'Tournament running — ', watch: 'Watch →', hide: 'Hide' },
+  de: { live: 'LIVE', running: 'Turnier läuft — ', watch: 'Zuschauen →', hide: 'Ausblenden' },
+};
 
 /**
  * Site-wide indicator that a tournament is happening right now.
@@ -23,8 +30,13 @@ interface ActiveTournament {
 export default function LiveBanner() {
   const [active, setActive] = useState<ActiveTournament[]>([]);
   const [dismissed, setDismissed] = useState(false);
+  const [locale, setLocale] = useState<Locale>('ru');
   const router = useRouter();
   const pathname = usePathname();
+
+  useEffect(() => { setLocale(detectLocale()); }, []);
+
+  const t = STR[locale];
 
   useEffect(() => {
     let cancelled = false;
@@ -63,8 +75,8 @@ export default function LiveBanner() {
           <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
         </span>
         <div className="flex-1 min-w-0 text-white text-sm">
-          <span className="font-bold uppercase tracking-wider text-[10px] mr-2">LIVE</span>
-          <span className="opacity-95">Идёт турнир — </span>
+          <span className="font-bold uppercase tracking-wider text-[10px] mr-2">{t.live}</span>
+          <span className="opacity-95">{t.running}</span>
           <span className="font-semibold truncate">{tournament.title}</span>
           {more > 0 && <span className="opacity-75 ml-1">(+{more})</span>}
         </div>
@@ -72,11 +84,11 @@ export default function LiveBanner() {
           onClick={() => router.push(`/watch/${tournament.id}`)}
           className="shrink-0 bg-white text-red-600 hover:bg-red-50 transition-colors px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap"
         >
-          Смотреть →
+          {t.watch}
         </button>
         <button
           onClick={() => setDismissed(true)}
-          aria-label="Скрыть"
+          aria-label={t.hide}
           className="shrink-0 text-white/70 hover:text-white text-lg leading-none px-1"
         >
           ×
