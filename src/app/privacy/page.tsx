@@ -341,6 +341,21 @@ export default function PrivacyPage() {
           <div>{c.lastUpdated}</div>
           <div>{c.effective}</div>
         </div>
+
+        {locale !== 'ru' && (
+          <div className="mb-8 rounded-2xl bg-amber-500/[0.06] border border-amber-500/20 px-4 py-3 text-xs text-amber-300/90 leading-relaxed">
+            {locale === 'en' ? (
+              <>
+                <span className="font-semibold">Translation notice.</span> This English version is provided for convenience only. The Russian version is the legally binding one. In case of any discrepancy, the Russian version prevails.
+              </>
+            ) : (
+              <>
+                <span className="font-semibold">Übersetzungshinweis.</span> Diese deutsche Fassung dient nur der Information. Rechtlich verbindlich ist ausschließlich die russische Fassung. Bei Abweichungen gilt die russische Fassung.
+              </>
+            )}
+          </div>
+        )}
+
         <div className="space-y-7">
           {c.sections.map((s: any, i: number) => (
             <section key={i}>
