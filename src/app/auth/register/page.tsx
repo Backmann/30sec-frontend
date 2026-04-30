@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/store';
-import { detectLocale, getTranslation } from '@/lib/i18n';
+import { detectLocale, getTranslation, Locale } from '@/lib/i18n';
 
 const countries = [
   { code: 'DE', flag: '\uD83C\uDDE9\uD83C\uDDEA', name: 'Deutschland' },
@@ -19,11 +19,58 @@ const countries = [
   { code: 'PL', flag: '\uD83C\uDDF5\uD83C\uDDF1', name: 'Polska' },
 ];
 
+const R_STR: Record<Locale, {
+  fastRegistration: string;
+  passwordPlaceholder: string;
+  nicknameHint: string;
+  country: string;
+  acceptTermsBefore: string;
+  acceptTermsLink: string;
+  acceptPrivacyBefore: string;
+  acceptPrivacyLink: string;
+  marketingConsent: string;
+}> = {
+  ru: {
+    fastRegistration: 'Быстрая регистрация · профиль заполните позже',
+    passwordPlaceholder: 'Минимум 8 символов',
+    nicknameHint: 'Как вас увидят в турнирах',
+    country: 'Страна',
+    acceptTermsBefore: 'Я принимаю ',
+    acceptTermsLink: 'условия использования',
+    acceptPrivacyBefore: 'Я принимаю ',
+    acceptPrivacyLink: 'политику конфиденциальности',
+    marketingConsent: 'Присылать мне новости о турнирах и обновлениях (необязательно)',
+  },
+  en: {
+    fastRegistration: 'Quick signup · complete your profile later',
+    passwordPlaceholder: 'Minimum 8 characters',
+    nicknameHint: 'How others will see you in tournaments',
+    country: 'Country',
+    acceptTermsBefore: 'I accept the ',
+    acceptTermsLink: 'terms of service',
+    acceptPrivacyBefore: 'I accept the ',
+    acceptPrivacyLink: 'privacy policy',
+    marketingConsent: 'Send me news about tournaments and updates (optional)',
+  },
+  de: {
+    fastRegistration: 'Schnelle Anmeldung · Profil später ausfüllen',
+    passwordPlaceholder: 'Mindestens 8 Zeichen',
+    nicknameHint: 'So sehen dich andere in den Turnieren',
+    country: 'Land',
+    acceptTermsBefore: 'Ich akzeptiere die ',
+    acceptTermsLink: 'Nutzungsbedingungen',
+    acceptPrivacyBefore: 'Ich akzeptiere die ',
+    acceptPrivacyLink: 'Datenschutzerklärung',
+    marketingConsent: 'Sende mir News über Turniere und Updates (optional)',
+  },
+};
+
 export default function RegisterPage() {
   const router = useRouter();
   const { register, loading, error, clearError } = useAuth();
   const [locale, setLocale] = useState(detectLocale());
   const t = getTranslation(locale);
+  const rt = R_STR[locale];
   const [mounted, setMounted] = useState(false);
   const [form, setForm] = useState({
     email: '', password: '', nickname: '', countryCode: 'DE',
@@ -63,7 +110,7 @@ export default function RegisterPage() {
             </h1>
           </Link>
           <p className="text-white/30 mt-3 text-sm font-medium">{t.auth.register}</p>
-          <p className="text-white/40 text-xs mt-2">Быстрая регистрация · профиль заполните позже</p>
+          <p className="text-white/40 text-xs mt-2">{rt.fastRegistration}</p>
         </div>
 
         <form onSubmit={handleSubmit}
@@ -85,18 +132,18 @@ export default function RegisterPage() {
           <div>
             <label className="input-label">{t.auth.password}</label>
             <input type="password" value={form.password} onChange={(e) => update('password', e.target.value)}
-              className="input-field" placeholder="Минимум 8 символов" required minLength={8} />
+              className="input-field" placeholder={rt.passwordPlaceholder} required minLength={8} />
           </div>
 
           <div>
             <label className="input-label">{t.auth.nickname}</label>
             <input type="text" value={form.nickname} onChange={(e) => update('nickname', e.target.value)}
               className="input-field font-mono" placeholder={t.auth.nicknamePlaceholder} required minLength={3} />
-            <div className="text-[10px] text-white/30 mt-1 px-1">Как вас увидят в турнирах</div>
+            <div className="text-[10px] text-white/30 mt-1 px-1">{rt.nicknameHint}</div>
           </div>
 
           <div>
-            <label className="input-label">Страна</label>
+            <label className="input-label">{rt.country}</label>
             <select value={form.countryCode} onChange={(e) => update('countryCode', e.target.value)}
               style={{ colorScheme: 'dark' }}
               className="input-field">
@@ -110,17 +157,17 @@ export default function RegisterPage() {
             <label className="flex items-start gap-2.5 text-xs text-white/70 cursor-pointer">
               <input type="checkbox" checked={form.acceptTerms} onChange={(e) => update('acceptTerms', e.target.checked)}
                 className="mt-0.5 w-4 h-4 rounded accent-brand-500 cursor-pointer shrink-0" />
-              <span>Я принимаю <Link href="/terms" target="_blank" className="text-brand-400 hover:text-brand-300 underline">условия использования</Link> <span className="text-red-400">*</span></span>
+              <span>{rt.acceptTermsBefore}<Link href="/terms" target="_blank" className="text-brand-400 hover:text-brand-300 underline">{rt.acceptTermsLink}</Link> <span className="text-red-400">*</span></span>
             </label>
             <label className="flex items-start gap-2.5 text-xs text-white/70 cursor-pointer">
               <input type="checkbox" checked={form.acceptPrivacy} onChange={(e) => update('acceptPrivacy', e.target.checked)}
                 className="mt-0.5 w-4 h-4 rounded accent-brand-500 cursor-pointer shrink-0" />
-              <span>Я принимаю <Link href="/privacy" target="_blank" className="text-brand-400 hover:text-brand-300 underline">политику конфиденциальности</Link> <span className="text-red-400">*</span></span>
+              <span>{rt.acceptPrivacyBefore}<Link href="/privacy" target="_blank" className="text-brand-400 hover:text-brand-300 underline">{rt.acceptPrivacyLink}</Link> <span className="text-red-400">*</span></span>
             </label>
             <label className="flex items-start gap-2.5 text-xs text-white/50 cursor-pointer">
               <input type="checkbox" checked={form.marketingConsent} onChange={(e) => update('marketingConsent', e.target.checked)}
                 className="mt-0.5 w-4 h-4 rounded accent-brand-500 cursor-pointer shrink-0" />
-              <span>Присылать мне новости о турнирах и обновлениях (необязательно)</span>
+              <span>{rt.marketingConsent}</span>
             </label>
           </div>
 

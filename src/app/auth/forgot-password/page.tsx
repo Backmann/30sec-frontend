@@ -3,12 +3,79 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { detectLocale, getTranslation } from '@/lib/i18n';
+import { detectLocale, getTranslation, Locale } from '@/lib/i18n';
+
+const F_STR: Record<Locale, {
+  passwordReset: string;
+  redirecting: string;
+  resetTitle: string;
+  enterCode: string;
+  sending: string;
+  sendCode: string;
+  backToLogin: string;
+  codeSentTo: string;
+  codeFromEmail: string;
+  newPassword: string;
+  newPasswordPlaceholder: string;
+  resetting: string;
+  resetPassword: string;
+  otherEmail: string;
+}> = {
+  ru: {
+    passwordReset: 'Пароль сброшен! ',
+    redirecting: 'Перенаправляем...',
+    resetTitle: 'Сброс пароля',
+    enterCode: 'Введите код из письма',
+    sending: 'Отправка...',
+    sendCode: 'Отправить код',
+    backToLogin: '← Назад к входу',
+    codeSentTo: 'Код отправлен на ',
+    codeFromEmail: 'Код из письма',
+    newPassword: 'Новый пароль',
+    newPasswordPlaceholder: 'Мин. 8 символов',
+    resetting: 'Сброс...',
+    resetPassword: 'Сбросить пароль',
+    otherEmail: '← Другой email',
+  },
+  en: {
+    passwordReset: 'Password has been reset! ',
+    redirecting: 'Redirecting...',
+    resetTitle: 'Reset password',
+    enterCode: 'Enter the code from the email',
+    sending: 'Sending...',
+    sendCode: 'Send code',
+    backToLogin: '← Back to sign in',
+    codeSentTo: 'Code sent to ',
+    codeFromEmail: 'Code from email',
+    newPassword: 'New password',
+    newPasswordPlaceholder: 'Min. 8 characters',
+    resetting: 'Resetting...',
+    resetPassword: 'Reset password',
+    otherEmail: '← Different email',
+  },
+  de: {
+    passwordReset: 'Passwort zurückgesetzt! ',
+    redirecting: 'Weiterleitung...',
+    resetTitle: 'Passwort zurücksetzen',
+    enterCode: 'Code aus der E-Mail eingeben',
+    sending: 'Senden...',
+    sendCode: 'Code senden',
+    backToLogin: '← Zurück zur Anmeldung',
+    codeSentTo: 'Code gesendet an ',
+    codeFromEmail: 'Code aus der E-Mail',
+    newPassword: 'Neues Passwort',
+    newPasswordPlaceholder: 'Mind. 8 Zeichen',
+    resetting: 'Zurücksetzen...',
+    resetPassword: 'Passwort zurücksetzen',
+    otherEmail: '← Andere E-Mail',
+  },
+};
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const locale = detectLocale();
   const t = getTranslation(locale);
+  const ft = F_STR[locale];
 
   const [step, setStep] = useState<'email' | 'code'>('email');
   const [email, setEmail] = useState('');
@@ -50,7 +117,7 @@ export default function ForgotPasswordPage() {
       });
       const data = await res.json();
       if (data.success) {
-        setSuccess('Пароль сброшен! Перенаправляем...');
+        setSuccess(ft.passwordReset + ft.redirecting);
         setTimeout(() => router.push('/auth/login'), 2000);
       } else {
         setError(data.message || 'Error');
@@ -73,7 +140,7 @@ export default function ForgotPasswordPage() {
             </h1>
           </Link>
           <p className="text-white/30 mt-3 text-sm font-medium">
-            {step === 'email' ? 'Сброс пароля' : 'Введите код из письма'}
+            {step === 'email' ? ft.resetTitle : ft.enterCode}
           </p>
         </div>
 
@@ -91,34 +158,34 @@ export default function ForgotPasswordPage() {
                 className="input-field" placeholder="player@example.com" required autoFocus />
             </div>
             <button type="submit" disabled={loading} className="btn-primary w-full text-center text-base">
-              {loading ? 'Отправка...' : 'Отправить код'}
+              {loading ? ft.sending : ft.sendCode}
             </button>
             <p className="text-center text-white/30 text-sm">
-              <Link href="/auth/login" className="text-brand-400 hover:text-brand-300 font-medium">← Назад к входу</Link>
+              <Link href="/auth/login" className="text-brand-400 hover:text-brand-300 font-medium">{ft.backToLogin}</Link>
             </p>
           </form>
         ) : (
           <form onSubmit={resetPassword} className="card-glass space-y-5 animate-slide-up">
             {error && <div className="bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 text-red-400 text-sm">{error}</div>}
             <div className="bg-brand-500/10 border border-brand-500/20 rounded-2xl px-4 py-3 text-brand-400 text-sm text-center">
-              Код отправлен на {email}
+              {ft.codeSentTo}{email}
             </div>
             <div>
-              <label className="input-label">Код из письма</label>
+              <label className="input-label">{ft.codeFromEmail}</label>
               <input type="text" value={code} onChange={(e) => setCode(e.target.value)}
                 className="input-field text-center text-2xl font-mono tracking-[0.3em]"
                 placeholder="000000" maxLength={6} required autoFocus />
             </div>
             <div>
-              <label className="input-label">Новый пароль</label>
+              <label className="input-label">{ft.newPassword}</label>
               <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
-                className="input-field" placeholder="Min. 8 символов" minLength={8} required />
+                className="input-field" placeholder={ft.newPasswordPlaceholder} minLength={8} required />
             </div>
             <button type="submit" disabled={loading} className="btn-primary w-full text-center text-base">
-              {loading ? 'Сброс...' : 'Сбросить пароль'}
+              {loading ? ft.resetting : ft.resetPassword}
             </button>
             <p className="text-center text-white/30 text-sm">
-              <button type="button" onClick={() => setStep('email')} className="text-brand-400 hover:text-brand-300 font-medium">← Другой email</button>
+              <button type="button" onClick={() => setStep('email')} className="text-brand-400 hover:text-brand-300 font-medium">{ft.otherEmail}</button>
             </p>
           </form>
         )}

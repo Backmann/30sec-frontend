@@ -4,9 +4,79 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/store';
-import { detectLocale, getTranslation } from '@/lib/i18n';
+import { detectLocale, getTranslation, Locale } from '@/lib/i18n';
 
 const RESEND_COOLDOWN_SEC = 60;
+
+const V_STR: Record<Locale, {
+  emailNotFound: string;
+  invalidCode: string;
+  codeResent: string;
+  resendFailed: string;
+  pageTitle: string;
+  verified: string;
+  redirecting: string;
+  enterCode: string;
+  sentTo: string;
+  checking: string;
+  confirm: string;
+  resendIn: string;
+  resendNow: string;
+  back: string;
+  resendCooldownSuffix: string;
+}> = {
+  ru: {
+    emailNotFound: 'Email не определён. Попробуй залогиниться заново.',
+    invalidCode: 'Неверный код. Попробуйте снова.',
+    codeResent: 'Код отправлен повторно. Проверьте почту.',
+    resendFailed: 'Не удалось отправить код повторно',
+    pageTitle: 'Подтверждение email',
+    verified: 'Email подтверждён!',
+    redirecting: 'Перенаправляем на дашборд...',
+    enterCode: 'Введите 6-значный код',
+    sentTo: 'Мы отправили его на ',
+    checking: 'Проверка...',
+    confirm: 'Подтвердить',
+    resendIn: 'Отправить код повторно через ',
+    resendCooldownSuffix: 'с',
+    resendNow: 'Не пришло письмо? Отправить заново',
+    back: '← Вернуться к входу',
+  },
+  en: {
+    emailNotFound: 'Email not found. Try signing in again.',
+    invalidCode: 'Invalid code. Please try again.',
+    codeResent: 'Code resent. Please check your email.',
+    resendFailed: 'Could not resend the code',
+    pageTitle: 'Email verification',
+    verified: 'Email verified!',
+    redirecting: 'Redirecting to dashboard...',
+    enterCode: 'Enter 6-digit code',
+    sentTo: 'We sent it to ',
+    checking: 'Checking...',
+    confirm: 'Confirm',
+    resendIn: 'Resend code in ',
+    resendCooldownSuffix: 's',
+    resendNow: 'No email received? Resend',
+    back: '← Back to sign in',
+  },
+  de: {
+    emailNotFound: 'E-Mail nicht erkannt. Bitte erneut anmelden.',
+    invalidCode: 'Ungültiger Code. Bitte erneut versuchen.',
+    codeResent: 'Code erneut gesendet. Bitte E-Mail prüfen.',
+    resendFailed: 'Code konnte nicht erneut gesendet werden',
+    pageTitle: 'E-Mail-Bestätigung',
+    verified: 'E-Mail bestätigt!',
+    redirecting: 'Weiterleitung zum Dashboard...',
+    enterCode: '6-stelligen Code eingeben',
+    sentTo: 'Wir haben ihn an ',
+    checking: 'Prüfen...',
+    confirm: 'Bestätigen',
+    resendIn: 'Code erneut senden in ',
+    resendCooldownSuffix: 's',
+    resendNow: 'Keine E-Mail erhalten? Erneut senden',
+    back: '← Zurück zur Anmeldung',
+  },
+};
 
 function VerifyEmailInner() {
   const router = useRouter();
@@ -14,6 +84,7 @@ function VerifyEmailInner() {
   const { user, loadUser } = useAuth();
   const [locale] = useState(detectLocale());
   const t = getTranslation(locale);
+  const vt = V_STR[locale];
 
   // Email priority: query param > logged in user > redirect
   const [email, setEmail] = useState<string>('');
@@ -97,7 +168,7 @@ function VerifyEmailInner() {
 
   const submitCode = useCallback(async (code: string) => {
     if (!email) {
-      setError('Email не определён. Попробуй залогиниться заново.');
+      setError(vt.emailNotFound);
       return;
     }
     setSubmitting(true);
@@ -110,7 +181,7 @@ function VerifyEmailInner() {
       // Wait for visual feedback then redirect
       setTimeout(() => router.push('/dashboard'), 1500);
     } catch (err: any) {
-      setError(err?.message || 'Неверный код. Попробуйте снова.');
+      setError(err?.message || vt.invalidCode);
       setDigits(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
     } finally {
@@ -124,10 +195,10 @@ function VerifyEmailInner() {
     setError(null);
     try {
       await api.resendVerificationCode();
-      setResendingMsg('Код отправлен повторно. Проверьте почту.');
+      setResendingMsg(vt.codeResent);
       setResendCooldown(RESEND_COOLDOWN_SEC);
     } catch (err: any) {
-      setError(err?.message || 'Не удалось отправить код повторно');
+      setError(err?.message || vt.resendFailed);
     }
   };
 
@@ -146,22 +217,22 @@ function VerifyEmailInner() {
               <span className="text-accent-400">.</span>
             </h1>
           </Link>
-          <p className="text-white/30 mt-3 text-sm font-medium">Подтверждение email</p>
+          <p className="text-white/30 mt-3 text-sm font-medium">{vt.pageTitle}</p>
         </div>
 
         <div className="card-glass animate-slide-up" style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
           {success ? (
             <div className="text-center py-6 animate-fade-in">
               <div className="text-5xl mb-3">✓</div>
-              <div className="text-xl font-bold text-green-400 mb-2">Email подтверждён!</div>
-              <div className="text-white/50 text-sm">Перенаправляем на дашборд...</div>
+              <div className="text-xl font-bold text-green-400 mb-2">{vt.verified}</div>
+              <div className="text-white/50 text-sm">{vt.redirecting}</div>
             </div>
           ) : (
             <>
               <div className="mb-5">
-                <div className="text-white text-base font-semibold mb-1">Введите 6-значный код</div>
+                <div className="text-white text-base font-semibold mb-1">{vt.enterCode}</div>
                 <div className="text-white/50 text-xs leading-relaxed">
-                  Мы отправили его на <span className="text-brand-400 font-mono">{email || '...'}</span>
+                  {vt.sentTo}<span className="text-brand-400 font-mono">{email || '...'}</span>
                 </div>
               </div>
 
@@ -203,9 +274,9 @@ function VerifyEmailInner() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                     </svg>
-                    Проверка...
+                    {vt.checking}
                   </span>
-                ) : 'Подтвердить'}
+                ) : vt.confirm}
               </button>
 
               <div className="mt-5 pt-4 border-t border-white/[0.05] text-center">
@@ -214,11 +285,11 @@ function VerifyEmailInner() {
                 )}
                 {resendCooldown > 0 ? (
                   <div className="text-white/40 text-xs">
-                    Отправить код повторно через <span className="font-mono text-white/60">{resendCooldown}</span>с
+                    {vt.resendIn}<span className="font-mono text-white/60">{resendCooldown}</span>{vt.resendCooldownSuffix}
                   </div>
                 ) : (
                   <button onClick={handleResend} className="text-brand-400 hover:text-brand-300 text-xs font-medium">
-                    Не пришло письмо? Отправить заново
+                    {vt.resendNow}
                   </button>
                 )}
               </div>
@@ -227,7 +298,7 @@ function VerifyEmailInner() {
         </div>
 
         <div className="mt-4 text-center text-white/30 text-xs">
-          <Link href="/auth/login" className="hover:text-white/60">← Вернуться к входу</Link>
+          <Link href="/auth/login" className="hover:text-white/60">{vt.back}</Link>
         </div>
       </div>
     </div>

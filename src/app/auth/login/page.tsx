@@ -4,13 +4,20 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/store';
-import { detectLocale, getTranslation } from '@/lib/i18n';
+import { detectLocale, getTranslation, Locale } from '@/lib/i18n';
+
+const L_STR: Record<Locale, { forgotPassword: string }> = {
+  ru: { forgotPassword: 'Забыли пароль?' },
+  en: { forgotPassword: 'Forgot your password?' },
+  de: { forgotPassword: 'Passwort vergessen?' },
+};
 
 export default function LoginPage() {
   const router = useRouter();
   const { login, googleLogin, loading, error, clearError } = useAuth();
   const [locale, setLocale] = useState(detectLocale());
   const t = getTranslation(locale);
+  const lt = L_STR[locale];
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [mounted, setMounted] = useState(false);
@@ -99,7 +106,7 @@ export default function LoginPage() {
               className="input-field" placeholder="••••••••" required
             />
             <Link href="/auth/forgot-password" className="text-brand-400/60 hover:text-brand-400 text-xs mt-1 inline-block transition-colors">
-              Забыли пароль?
+              {lt.forgotPassword}
             </Link>
           </div>
 
