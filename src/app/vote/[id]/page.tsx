@@ -4,6 +4,181 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/store';
 import { api } from '@/lib/api';
 import ImageLightbox from '@/components/ImageLightbox';
+import { detectLocale, Locale } from '@/lib/i18n';
+
+const V_STR: Record<Locale, {
+  voteWithdrawn: string;
+  voteMoved: string;
+  voteCounted: string;
+  errorPrefix: string;
+  tournamentNotFound: string;
+  votingClosedTitle: string;
+  votingClosedText: string;
+  signInToVoteTitle: string;
+  signInToVoteText: (hours: number) => string;
+  signInButton: string;
+  pickBestTitle: string;
+  pickBestText: (hours: number) => string;
+  toHome: string;
+  pageTitle: string;
+  howVotingWorks: string;
+  rule1Before: string;
+  rule1Bold: string;
+  rule1After: string;
+  rule2: string;
+  rule3: string;
+  rule4Before: string;
+  rule4Bold: string;
+  rule4After: string;
+  rule5: string;
+  votingWinner: string;
+  currentLeader: string;
+  coWinners: (n: number) => string;
+  currentLeaders: (n: number) => string;
+  voteWord: (n: number) => string;
+  authorPrefix: string;
+  questionsCount: string;
+  totalVotes: string;
+  withdrawTitle: string;
+  giveVoteTitle: string;
+  yourVote: string;
+  giveVote: string;
+  signInShort: string;
+  noQuestionsPlayed: string;
+  yourVoteFor: string;
+  withdrawShort: string;
+  withdraw: string;
+}> = {
+  ru: {
+    voteWithdrawn: 'Голос отозван',
+    voteMoved: 'Голос перенесён на другой вопрос',
+    voteCounted: 'Ваш голос учтён!',
+    errorPrefix: 'Ошибка: ',
+    tournamentNotFound: 'Турнир не найден',
+    votingClosedTitle: 'Голосование завершено',
+    votingClosedText: 'Итоги ниже. Голосование было открыто в течение 48 часов после завершения турнира.',
+    signInToVoteTitle: 'Войдите, чтобы проголосовать',
+    signInToVoteText: (h) => `Голосование открыто ещё ${h}ч. Войдите и выберите самый впечатливший вопрос турнира.`,
+    signInButton: 'Войти в аккаунт',
+    pickBestTitle: 'Выберите лучший вопрос турнира',
+    pickBestText: (h) => `Кликните «Отдать голос» на одном вопросе — у вас один голос на турнир, можно изменить до конца голосования (ещё ${h}ч).`,
+    toHome: '← На главную',
+    pageTitle: 'Лучший вопрос турнира',
+    howVotingWorks: 'Как работает голосование',
+    rule1Before: 'У каждого пользователя ',
+    rule1Bold: 'один голос',
+    rule1After: ' на турнир',
+    rule2: 'Голос можно переносить между вопросами до конца голосования',
+    rule3: 'Голосовать могут все: и игроки, и зрители',
+    rule4Before: 'Голосование открыто ',
+    rule4Bold: '48 часов',
+    rule4After: ' после завершения турнира',
+    rule5: 'Автор самого популярного вопроса получает признание сообщества',
+    votingWinner: '🏆 Победитель голосования',
+    currentLeader: 'Текущий лидер',
+    coWinners: (n) => `🏆 Со-победители (${n})`,
+    currentLeaders: (n) => `Текущие лидеры (${n})`,
+    voteWord: (n) => n === 1 ? 'голос' : 'голос(ов)',
+    authorPrefix: 'Автор: ',
+    questionsCount: 'Вопросов: ',
+    totalVotes: 'Всего голосов: ',
+    withdrawTitle: 'Нажмите чтобы отозвать голос',
+    giveVoteTitle: 'Отдать голос за этот вопрос',
+    yourVote: '✓ Ваш голос',
+    giveVote: 'Отдать голос',
+    signInShort: '🔒 Войдите',
+    noQuestionsPlayed: 'Нет сыгранных вопросов в этом турнире',
+    yourVoteFor: 'Ваш голос отдан за',
+    withdrawShort: 'Отозвать голос',
+    withdraw: 'Отозвать',
+  },
+  en: {
+    voteWithdrawn: 'Vote withdrawn',
+    voteMoved: 'Vote moved to another question',
+    voteCounted: 'Your vote is counted!',
+    errorPrefix: 'Error: ',
+    tournamentNotFound: 'Tournament not found',
+    votingClosedTitle: 'Voting closed',
+    votingClosedText: 'Results below. Voting was open for 48 hours after the tournament ended.',
+    signInToVoteTitle: 'Sign in to vote',
+    signInToVoteText: (h) => `Voting open for ${h}h more. Sign in and pick the most impressive question of the tournament.`,
+    signInButton: 'Sign in',
+    pickBestTitle: 'Pick the best question of the tournament',
+    pickBestText: (h) => `Click "Vote" on one question — you have one vote per tournament, you can change it until voting closes (${h}h left).`,
+    toHome: '← Home',
+    pageTitle: 'Best question of the tournament',
+    howVotingWorks: 'How voting works',
+    rule1Before: 'Each user has ',
+    rule1Bold: 'one vote',
+    rule1After: ' per tournament',
+    rule2: 'You can move your vote between questions until voting closes',
+    rule3: 'Anyone can vote: players and spectators',
+    rule4Before: 'Voting is open for ',
+    rule4Bold: '48 hours',
+    rule4After: ' after the tournament ends',
+    rule5: 'The author of the most popular question earns community recognition',
+    votingWinner: '🏆 Voting winner',
+    currentLeader: 'Current leader',
+    coWinners: (n) => `🏆 Co-winners (${n})`,
+    currentLeaders: (n) => `Current leaders (${n})`,
+    voteWord: (n) => n === 1 ? 'vote' : 'votes',
+    authorPrefix: 'Author: ',
+    questionsCount: 'Questions: ',
+    totalVotes: 'Total votes: ',
+    withdrawTitle: 'Click to withdraw vote',
+    giveVoteTitle: 'Vote for this question',
+    yourVote: '✓ Your vote',
+    giveVote: 'Vote',
+    signInShort: '🔒 Sign in',
+    noQuestionsPlayed: 'No questions played in this tournament',
+    yourVoteFor: 'Your vote is for',
+    withdrawShort: 'Withdraw vote',
+    withdraw: 'Withdraw',
+  },
+  de: {
+    voteWithdrawn: 'Stimme zurückgezogen',
+    voteMoved: 'Stimme zu einer anderen Frage verschoben',
+    voteCounted: 'Deine Stimme zählt!',
+    errorPrefix: 'Fehler: ',
+    tournamentNotFound: 'Turnier nicht gefunden',
+    votingClosedTitle: 'Abstimmung beendet',
+    votingClosedText: 'Ergebnisse unten. Die Abstimmung war 48 Stunden nach Turnierende geöffnet.',
+    signInToVoteTitle: 'Zum Abstimmen anmelden',
+    signInToVoteText: (h) => `Abstimmung läuft noch ${h}h. Melde dich an und wähle die beeindruckendste Frage des Turniers.`,
+    signInButton: 'Anmelden',
+    pickBestTitle: 'Wähle die beste Frage des Turniers',
+    pickBestText: (h) => `Klicke „Abstimmen" bei einer Frage — du hast eine Stimme pro Turnier und kannst sie bis Abstimmungsende ändern (noch ${h}h).`,
+    toHome: '← Zur Startseite',
+    pageTitle: 'Beste Frage des Turniers',
+    howVotingWorks: 'So funktioniert die Abstimmung',
+    rule1Before: 'Jeder Nutzer hat ',
+    rule1Bold: 'eine Stimme',
+    rule1After: ' pro Turnier',
+    rule2: 'Du kannst deine Stimme zwischen Fragen verschieben, bis die Abstimmung endet',
+    rule3: 'Alle können abstimmen: Spieler und Zuschauer',
+    rule4Before: 'Die Abstimmung ist ',
+    rule4Bold: '48 Stunden',
+    rule4After: ' nach Turnierende geöffnet',
+    rule5: 'Der Autor der beliebtesten Frage erhält Anerkennung der Community',
+    votingWinner: '🏆 Sieger der Abstimmung',
+    currentLeader: 'Aktueller Spitzenreiter',
+    coWinners: (n) => `🏆 Mit-Sieger (${n})`,
+    currentLeaders: (n) => `Aktuelle Spitzenreiter (${n})`,
+    voteWord: (n) => n === 1 ? 'Stimme' : 'Stimmen',
+    authorPrefix: 'Autor: ',
+    questionsCount: 'Fragen: ',
+    totalVotes: 'Stimmen gesamt: ',
+    withdrawTitle: 'Klicken zum Zurückziehen',
+    giveVoteTitle: 'Für diese Frage abstimmen',
+    yourVote: '✓ Deine Stimme',
+    giveVote: 'Abstimmen',
+    signInShort: '🔒 Anmelden',
+    noQuestionsPlayed: 'In diesem Turnier wurden keine Fragen gespielt',
+    yourVoteFor: 'Deine Stimme geht an',
+    withdrawShort: 'Stimme zurückziehen',
+    withdraw: 'Zurückziehen',
+  },
+};
 
 export default function VotePage() {
   const params = useParams();
@@ -11,6 +186,9 @@ export default function VotePage() {
   const tournamentId = params.id as string;
   const { user } = useAuth();
   const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  const [locale, setLocale] = useState<Locale>('ru');
+  useEffect(() => { setLocale(detectLocale()); }, []);
+  const vt = V_STR[locale];
   const [results, setResults] = useState<any>(null);
   const [myVote, setMyVote] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,15 +233,15 @@ export default function VotePage() {
       setMyVote(res.voted ? questionId : null);
       // Toast feedback
       if (!res.voted) {
-        showToast('Голос отозван');
+        showToast(vt.voteWithdrawn);
       } else if (wasVoted && wasVoted !== questionId) {
-        showToast('Голос перенесён на другой вопрос');
+        showToast(vt.voteMoved);
       } else {
-        showToast('Ваш голос учтён!');
+        showToast(vt.voteCounted);
       }
       await load();
     } catch (e: any) {
-      alert('Ошибка: ' + (e.message || ''));
+      alert(vt.errorPrefix + (e.message || ''));
     }
     setVoting(null);
   };
@@ -76,7 +254,7 @@ export default function VotePage() {
 
   if (!results) return (
     <div className="min-h-screen flex items-center justify-center text-white/60">
-      Турнир не найден
+      {vt.tournamentNotFound}
     </div>
   );
 
@@ -98,25 +276,25 @@ export default function VotePage() {
     if (!results.votingOpen) {
       return {
         icon: '📊',
-        title: 'Голосование завершено',
-        text: 'Итоги ниже. Голосование было открыто в течение 48 часов после завершения турнира.',
+        title: vt.votingClosedTitle,
+        text: vt.votingClosedText,
         bg: 'from-white/[0.02] to-transparent border-white/10',
       };
     }
     if (!token) {
       return {
         icon: '🔒',
-        title: 'Войдите, чтобы проголосовать',
-        text: `Голосование открыто ещё ${results.hoursLeft}ч. Войдите и выберите самый впечатливший вопрос турнира.`,
+        title: vt.signInToVoteTitle,
+        text: vt.signInToVoteText(results.hoursLeft),
         bg: 'from-amber-500/10 to-transparent border-amber-500/30',
-        action: { label: 'Войти в аккаунт', onClick: () => router.push('/login?redirect=' + encodeURIComponent(`/vote/${tournamentId}`)) },
+        action: { label: vt.signInButton, onClick: () => router.push('/login?redirect=' + encodeURIComponent(`/vote/${tournamentId}`)) },
       };
     }
     if (myVote) return null; // Sticky bar shows current vote
     return {
       icon: '⭐',
-      title: 'Выберите лучший вопрос турнира',
-      text: `Кликните «Отдать голос» на одном вопросе — у вас один голос на турнир, можно изменить до конца голосования (ещё ${results.hoursLeft}ч).`,
+      title: vt.pickBestTitle,
+      text: vt.pickBestText(results.hoursLeft),
       bg: 'from-brand-500/10 to-transparent border-brand-500/30',
     };
   };
@@ -133,12 +311,12 @@ export default function VotePage() {
       )}
 
       <div className="max-w-4xl mx-auto">
-        <button onClick={() => router.push('/dashboard')} className="text-white/40 hover:text-white text-sm mb-4">← На главную</button>
+        <button onClick={() => router.push('/dashboard')} className="text-white/40 hover:text-white text-sm mb-4">{vt.toHome}</button>
 
         {/* Header */}
         <div className="card-glow mb-4 text-center py-6 px-6">
           <div className="text-3xl mb-1">⭐</div>
-          <h1 className="text-xl sm:text-2xl font-black text-white mb-1">Лучший вопрос турнира</h1>
+          <h1 className="text-xl sm:text-2xl font-black text-white mb-1">{vt.pageTitle}</h1>
           <div className="text-white/50 text-sm">{results.tournamentTitle}</div>
         </div>
 
@@ -164,15 +342,15 @@ export default function VotePage() {
         <div className="mb-4">
           <button onClick={() => setShowRules(!showRules)} className="text-white/40 hover:text-white text-xs flex items-center gap-1">
             <span>{showRules ? '▾' : '▸'}</span>
-            <span>Как работает голосование</span>
+            <span>{vt.howVotingWorks}</span>
           </button>
           {showRules && (
             <div className="card mt-2 py-4 px-5 text-sm text-white/60 space-y-2 animate-slide-down">
-              <div>• У каждого пользователя <span className="text-white font-medium">один голос</span> на турнир</div>
-              <div>• Голос можно переносить между вопросами до конца голосования</div>
-              <div>• Голосовать могут все: и игроки, и зрители</div>
-              <div>• Голосование открыто <span className="text-white font-medium">48 часов</span> после завершения турнира</div>
-              <div>• Автор самого популярного вопроса получает признание сообщества</div>
+              <div>• {vt.rule1Before}<span className="text-white font-medium">{vt.rule1Bold}</span>{vt.rule1After}</div>
+              <div>• {vt.rule2}</div>
+              <div>• {vt.rule3}</div>
+              <div>• {vt.rule4Before}<span className="text-white font-medium">{vt.rule4Bold}</span>{vt.rule4After}</div>
+              <div>• {vt.rule5}</div>
             </div>
           )}
         </div>
@@ -188,10 +366,10 @@ export default function VotePage() {
               <div className="text-[10px] uppercase tracking-[0.2em] text-accent-400 mb-3 flex items-center justify-between">
                 <span>
                   {winners.length === 1
-                    ? (isClosed ? '🏆 Победитель голосования' : 'Текущий лидер')
-                    : (isClosed ? `🏆 Со-победители (${winners.length})` : `Текущие лидеры (${winners.length})`)}
+                    ? (isClosed ? vt.votingWinner : vt.currentLeader)
+                    : (isClosed ? vt.coWinners(winners.length) : vt.currentLeaders(winners.length))}
                 </span>
-                <span className="text-white/40">{maxV} {maxV === 1 ? 'голос' : 'голос(ов)'}</span>
+                <span className="text-white/40">{maxV} {vt.voteWord(maxV)}</span>
               </div>
               <div className="space-y-3">
                 {winners.map((item: any) => {
@@ -206,7 +384,7 @@ export default function VotePage() {
                         <div className="text-white font-medium leading-tight">{loc?.questionText}</div>
                         {loc?.correctAnswer && <div className="text-green-400/70 text-xs mt-0.5">→ {loc.correctAnswer}</div>}
                         {item.creator && (
-                          <div className="text-white/40 text-[11px] mt-1">Автор: <button onClick={(e) => { e.stopPropagation(); router.push(`/player/${item.creator.nickname}`); }} className="text-white/70 hover:text-brand-400 underline-offset-2 hover:underline">{item.creator.nickname}</button></div>
+                          <div className="text-white/40 text-[11px] mt-1">{vt.authorPrefix}<button onClick={(e) => { e.stopPropagation(); router.push(`/player/${item.creator.nickname}`); }} className="text-white/70 hover:text-brand-400 underline-offset-2 hover:underline">{item.creator.nickname}</button></div>
                         )}
                       </div>
                     </div>
@@ -219,8 +397,8 @@ export default function VotePage() {
 
         {/* Stats */}
         <div className="flex items-center justify-between text-xs text-white/40 mb-3 px-1">
-          <div>Вопросов: <span className="text-white/70 font-semibold">{results.items.length}</span></div>
-          <div>Всего голосов: <span className="text-white/70 font-semibold">{results.totalVotes}</span></div>
+          <div>{vt.questionsCount}<span className="text-white/70 font-semibold">{results.items.length}</span></div>
+          <div>{vt.totalVotes}<span className="text-white/70 font-semibold">{results.totalVotes}</span></div>
         </div>
 
         {/* Questions — in match order */}
@@ -255,7 +433,7 @@ export default function VotePage() {
                     )}
                     <div className="flex items-center justify-between mt-3 gap-3 flex-wrap">
                       <div className="text-xs text-white/40">
-                        {item.creator ? <>Автор: <button onClick={() => router.push(`/player/${item.creator.nickname}`)} className="text-white/70 hover:text-brand-400 font-medium underline-offset-2 hover:underline">{item.creator.nickname}</button> {item.creator.flagCode && <span className="ml-1">{item.creator.flagCode.toUpperCase()}</span>}</> : null}
+                        {item.creator ? <>{vt.authorPrefix}<button onClick={() => router.push(`/player/${item.creator.nickname}`)} className="text-white/70 hover:text-brand-400 font-medium underline-offset-2 hover:underline">{item.creator.nickname}</button> {item.creator.flagCode && <span className="ml-1">{item.creator.flagCode.toUpperCase()}</span>}</> : null}
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="text-right">
@@ -271,9 +449,9 @@ export default function VotePage() {
                                 ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/30 hover:bg-brand-600'
                                 : 'bg-white/5 hover:bg-brand-500/20 text-white/70 hover:text-brand-400 border border-white/10 hover:border-brand-500/30'
                             }`}
-                            title={isMyVote ? 'Нажмите чтобы отозвать голос' : 'Отдать голос за этот вопрос'}
+                            title={isMyVote ? vt.withdrawTitle : vt.giveVoteTitle}
                           >
-                            {voting === item.questionId ? '...' : isMyVote ? '✓ Ваш голос' : token ? 'Отдать голос' : '🔒 Войдите'}
+                            {voting === item.questionId ? '...' : isMyVote ? vt.yourVote : token ? vt.giveVote : vt.signInShort}
                           </button>
                         )}
                       </div>
@@ -292,7 +470,7 @@ export default function VotePage() {
 
         {results.items.length === 0 && (
           <div className="card py-10 text-center text-white/40">
-            Нет сыгранных вопросов в этом турнире
+            {vt.noQuestionsPlayed}
           </div>
         )}
       </div>
@@ -303,7 +481,7 @@ export default function VotePage() {
           <div className="max-w-4xl mx-auto p-3 sm:px-5 sm:py-3 flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-brand-500/20 text-brand-400 flex items-center justify-center shrink-0 font-bold text-sm">✓</div>
             <div className="flex-1 min-w-0">
-              <div className="text-[10px] uppercase tracking-wider text-brand-400/80">Ваш голос отдан за</div>
+              <div className="text-[10px] uppercase tracking-wider text-brand-400/80">{vt.yourVoteFor}</div>
               <div className="text-white text-sm truncate">
                 <span className="text-white/40 font-mono text-xs mr-1">#{myVotedIndex + 1}</span>
                 {myVotedLoc?.questionText}
@@ -312,9 +490,9 @@ export default function VotePage() {
             <button
               onClick={() => myVote && vote(myVote, myVotedLoc?.questionText || '')}
               className="text-white/50 hover:text-red-400 text-xs shrink-0 px-3 py-1.5 rounded-lg hover:bg-red-500/10 transition whitespace-nowrap"
-              title="Отозвать голос"
+              title={vt.withdrawShort}
             >
-              Отозвать
+              {vt.withdraw}
             </button>
           </div>
         </div>
