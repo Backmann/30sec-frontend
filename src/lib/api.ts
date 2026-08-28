@@ -2,6 +2,16 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://30sec.org/api';
 
 class ApiClient {
   private baseUrl: string;
+  /**
+   * In-flight refresh, shared by every caller.
+   *
+   * Without it, several requests failing with 401 at the same moment each
+   * started their own refresh. The server issues a new refresh token every
+   * time, so the slower responses overwrote the newer tokens with older ones
+   * and part of the requests failed — or, now that tokens are versioned, the
+   * whole session could be dropped.
+   */
+  private refreshPromise: Promise<boolean> | null = null;
 
   constructor() {
     this.baseUrl = API_URL;
@@ -75,22 +85,34 @@ class ApiClient {
   }
 
   private async refreshToken(): Promise<boolean> {
-    try {
-      const refreshToken = this.getRefreshToken();
-      const res = await fetch(`${this.baseUrl}/auth/refresh`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${refreshToken}`,
-        },
-      });
-      if (!res.ok) return false;
-      const data = await res.json();
-      this.setTokens(data.accessToken, data.refreshToken);
-      return true;
-    } catch {
-      return false;
-    }
+    // Everyone who arrives while a refresh is running waits for that same one.
+    if (this.refreshPromise) return this.refreshPromise;
+
+    this.refreshPromise = (async () => {
+      try {
+        const refreshToken = this.getRefreshToken();
+        if (!refreshToken) return false;
+        const res = await fetch(`${this.baseUrl}/auth/refresh`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${refreshToken}`,
+          },
+        });
+        if (!res.ok) return false;
+        const data = await res.json();
+        this.setTokens(data.accessToken, data.refreshToken);
+        return true;
+      } catch {
+        return false;
+      } finally {
+        // Released in finally so a thrown error cannot leave the client stuck
+        // with a promise that never clears.
+        this.refreshPromise = null;
+      }
+    })();
+
+    return this.refreshPromise;
   }
 
   // ─── Auth ─────────────────────────────────────
@@ -170,8 +192,33 @@ class ApiClient {
     return this.request<any>('/auth/me');
   }
 
-  logout() {
+  /**
+   * Revoke the session on the server, then forget it locally.
+   *
+   * Clearing localStorage alone left the refresh token valid for its full
+   * lifetime — anyone holding a copy could keep the session alive after the
+   * user believed they had logged out.
+   *
+   * Tokens are cleared BEFORE the request is sent: callers do not await this
+   * (`logout(); router.push('/')`), so the local state must already be gone by
+   * the time the function first yields. The server call then happens in the
+   * background, and a failed request never keeps the user signed in.
+   */
+  async logout() {
+    const token = this.getToken();
     this.clearTokens();
+    if (!token) return;
+    try {
+      await fetch(`${this.baseUrl}/auth/logout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+    } catch {
+      // Offline or token already expired — the local session is gone either way.
+    }
   }
 
   // ─── Profile ──────────────────────────────────

@@ -65,7 +65,9 @@ export const useAuth = create<AuthState>((set) => ({
     }
   },
   logout: () => {
-    api.logout();
+    // Fire-and-forget on purpose: api.logout() clears the tokens synchronously
+    // and swallows its own errors, so the UI can navigate away immediately.
+    void api.logout();
     set({ user: null });
   },
 
