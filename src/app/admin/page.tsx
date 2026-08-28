@@ -222,7 +222,21 @@ export default function AdminPage() {
   const doDeleteT = async (id: string, t: string) => { if (!confirm('Delete "'+t+'"?')) return; try { await api.deleteTournament(id); refresh(); } catch(e:any) { alert(e.message); } };
   const doStartT = async (id: string) => { setBusy(id); try { await api.startTournament(id); refresh(); } catch(e:any) { alert(e.message); } setBusy(''); };
   const doFinishT = async (id: string) => { if (!confirm('Finish?')) return; await api.finishTournament(id); refresh(); };
-  const doFillTest = async (id: string) => { setBusy('fill-'+id); try { const r = await api.fillTestQuestions(id); alert('Added '+r.added+'. Total: '+r.total); refresh(); } catch(e:any) { alert(e.message); } setBusy(''); };
+  // Generates simple questions from a built-in list, marked with theme TEST so
+  // they never mix into the real library. Use it to reach 23 and rehearse a
+  // tournament without spending authored questions.
+  const doFillTest = async (id: string) => {
+    if (!confirm('Добавить недостающие вопросы из встроенного тестового набора?\n\nОни помечаются как TEST и в библиотеку не попадут.')) return;
+    setBusy('fill-'+id);
+    try {
+      const r = await api.fillTestQuestions(id);
+      alert(`Добавлено тестовых вопросов: ${r.added}. Всего в турнире: ${r.total}/${RQ}`);
+      refresh();
+    } catch(e:any) {
+      alert('Ошибка: ' + (e.message || ''));
+    }
+    setBusy('');
+  };
   const doApprove = async (pid: string) => { await api.approveParticipant(pid); refresh(); };
   const doReject = async (pid: string) => { await api.rejectParticipant(pid); refresh(); };
   const doCreateQ = async () => {
@@ -763,7 +777,7 @@ export default function AdminPage() {
 
             {/* ─── BY TOURNAMENT SUBTAB ─── */}
             {qSubtab === 'byTournament' && <div>
-              {tournaments.filter(t=>t.status!=='FINISHED').map(t=>{const tqs=t.tournamentQuestions||[];return <div key={t.id} className="mb-6"><div className="flex items-center gap-2 mb-2 flex-wrap"><h3 className="text-sm font-semibold text-white/50">{t.title}</h3><span className={`text-[10px] font-mono ${tqs.length>=RQ?'text-green-400':'text-amber-400'}`}>{tqs.length}/{RQ}</span>{tqs.length<RQ&&<span className="text-[10px] text-red-400/60">нужно ещё {RQ-tqs.length}</span>}{tqs.length>1&&<span className="text-[10px] text-white/30 ml-auto">⇅ перетащите чтобы изменить порядок</span>}{tqs.length<RQ&&(()=>{const need=RQ-tqs.length;const canAdd=freeCount!==null?Math.min(need,freeCount):need;const enough=freeCount===null||freeCount>=need;return <><button onClick={()=>doAutoFill(t.id)} disabled={freeCount===0} className={`text-[10px] px-2 py-0.5 rounded-md font-semibold transition ${freeCount===0?'bg-white/5 text-white/30 cursor-not-allowed':enough?'bg-brand-500/10 hover:bg-brand-500/20 text-brand-400':'bg-amber-500/10 hover:bg-amber-500/20 text-amber-400'}`} title={freeCount===0?'В библиотеке нет свободных вопросов':enough?'Заполнить случайными свободными':`Будет добавлено ${canAdd}/${need} — в библиотеке ${freeCount} свободных`}>⚡ {freeCount===0?'Нет свободных':enough?'Заполнить':`Заполнить ${canAdd}/${need}`}</button>{freeCount!==null&&<span className="text-[10px] text-white/30">в библиотеке: <span className={freeCount===0?'text-red-400':'text-white/50'}>{freeCount}</span></span>}</>;})()}</div><ReorderableQuestions tournamentId={t.id} tqs={tqs} onRemove={doRemoveFromTournament} onReorderSaved={() => { /* optional: refresh data */ }} /></div>})}
+              {tournaments.filter(t=>t.status!=='FINISHED').map(t=>{const tqs=t.tournamentQuestions||[];return <div key={t.id} className="mb-6"><div className="flex items-center gap-2 mb-2 flex-wrap"><h3 className="text-sm font-semibold text-white/50">{t.title}</h3><span className={`text-[10px] font-mono ${tqs.length>=RQ?'text-green-400':'text-amber-400'}`}>{tqs.length}/{RQ}</span>{tqs.length<RQ&&<span className="text-[10px] text-red-400/60">нужно ещё {RQ-tqs.length}</span>}{tqs.length>1&&<span className="text-[10px] text-white/30 ml-auto">⇅ перетащите чтобы изменить порядок</span>}{tqs.length<RQ&&(()=>{const need=RQ-tqs.length;const canAdd=freeCount!==null?Math.min(need,freeCount):need;const enough=freeCount===null||freeCount>=need;return <><button onClick={()=>doAutoFill(t.id)} disabled={freeCount===0} className={`text-[10px] px-2 py-0.5 rounded-md font-semibold transition ${freeCount===0?'bg-white/5 text-white/30 cursor-not-allowed':enough?'bg-brand-500/10 hover:bg-brand-500/20 text-brand-400':'bg-amber-500/10 hover:bg-amber-500/20 text-amber-400'}`} title={freeCount===0?'В библиотеке нет свободных вопросов':enough?'Заполнить случайными свободными':`Будет добавлено ${canAdd}/${need} — в библиотеке ${freeCount} свободных`}>⚡ {freeCount===0?'Нет свободных':enough?'Заполнить':`Заполнить ${canAdd}/${need}`}</button><button onClick={()=>doFillTest(t.id)} disabled={busy==='fill-'+t.id} className="text-[10px] px-2 py-0.5 rounded-md font-semibold transition bg-white/5 hover:bg-white/10 text-white/60 disabled:opacity-40" title="Добавить простые вопросы из встроенного набора (помечаются TEST, в библиотеку не попадают)">{busy==='fill-'+t.id?'…':`🧪 Тестовыми ${need}`}</button>{freeCount!==null&&<span className="text-[10px] text-white/30">в библиотеке: <span className={freeCount===0?'text-red-400':'text-white/50'}>{freeCount}</span></span>}</>;})()}</div><ReorderableQuestions tournamentId={t.id} tqs={tqs} onRemove={doRemoveFromTournament} onReorderSaved={() => { /* optional: refresh data */ }} /></div>})}
               {tournaments.filter(t=>t.status!=='FINISHED').length === 0 && <div className="card py-8 text-center text-white/30 text-sm">Нет активных турниров</div>}
             </div>}
           </div>}
