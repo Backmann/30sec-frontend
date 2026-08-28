@@ -5,6 +5,7 @@ import TrackingPing from '@/components/TrackingPing';
 import CookieBanner from '@/components/CookieBanner';
 import FeedbackButton from '@/components/FeedbackButton';
 import LiveBanner from '@/components/LiveBanner';
+import HtmlLangSync from '@/components/HtmlLangSync';
 
 export const metadata: Metadata = {
   title: '30sec. — Intellectual Tournament',
@@ -20,9 +21,12 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // lang here is only a server-side default — HtmlLangSync corrects it on the
+  // client once the visitor's chosen language is known.
   return (
     <html lang="ru" className="dark">
       <body className="min-h-screen bg-dark-900 overflow-x-hidden">
+        <HtmlLangSync />
         <TrackingPing />
         <CookieBanner />
         <FeedbackButton />
