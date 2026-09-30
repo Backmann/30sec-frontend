@@ -14,6 +14,9 @@ import { rankTitle } from '@/lib/ranks';
 const P_STR: Record<Locale, {
   saved: string;
   errorPrefix: string;
+  saveBtn: string;
+  savingBtn: string;
+  cancelBtn: string;
   tabStats: string;
   tabAchievements: string;
   tabAnswers: string;
@@ -76,6 +79,9 @@ const P_STR: Record<Locale, {
   ru: {
     saved: '✓ Сохранено',
     errorPrefix: 'Ошибка: ',
+    saveBtn: 'Сохранить',
+    savingBtn: 'Сохранение…',
+    cancelBtn: 'Отменить',
     tabStats: '📊 Статистика',
     tabAchievements: '🏅 Достижения',
     tabAnswers: '📝 Ответы',
@@ -138,6 +144,9 @@ const P_STR: Record<Locale, {
   en: {
     saved: '✓ Saved',
     errorPrefix: 'Error: ',
+    saveBtn: 'Save',
+    savingBtn: 'Saving…',
+    cancelBtn: 'Cancel',
     tabStats: '📊 Statistics',
     tabAchievements: '🏅 Achievements',
     tabAnswers: '📝 Answers',
@@ -200,6 +209,9 @@ const P_STR: Record<Locale, {
   de: {
     saved: '✓ Gespeichert',
     errorPrefix: 'Fehler: ',
+    saveBtn: 'Speichern',
+    savingBtn: 'Wird gespeichert…',
+    cancelBtn: 'Abbrechen',
     tabStats: '📊 Statistik',
     tabAchievements: '🏅 Erfolge',
     tabAnswers: '📝 Antworten',
@@ -279,6 +291,7 @@ export default function ProfilePage() {
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({ nickname: '', firstName: '', lastName: '', language: '', showRealName: false, dateOfBirth: '', gender: '', city: '', bio: '', phone: '', avatarUrl: '', showCity: true, showAge: false, showCountry: true });
   const [saveMsg, setSaveMsg] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     loadUser().then(() => setLoading(false));
@@ -323,14 +336,27 @@ export default function ProfilePage() {
   }, [profile]);
 
   const saveProfile = async () => {
+    if (saving) return;
+    setSaving(true);
+    setSaveMsg('');
     try {
-      await api.updateProfile(editForm);
+      // The API validates with forbidNonWhitelisted, and an empty string is
+      // neither a valid date nor one of the allowed gender values — sending
+      // those blank would fail the whole request with a 400. Blank text
+      // fields are kept on purpose: that is how a field gets cleared.
+      const payload: Record<string, any> = { ...editForm };
+      if (!payload.dateOfBirth) delete payload.dateOfBirth;
+      if (!payload.gender) delete payload.gender;
+      if (!payload.nickname) delete payload.nickname;
+      await api.updateProfile(payload);
       setSaveMsg(pt.saved);
       setEditMode(false);
       await Promise.all([api.getMyProfile().then(setProfile), loadUser()]);
       setTimeout(() => setSaveMsg(''), 3000);
     } catch (err: any) {
       setSaveMsg(pt.errorPrefix + err.message);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -708,7 +734,30 @@ export default function ProfilePage() {
                 <div className="text-[10px] text-white/30 mt-3">{pt.emailNeverShown}</div>
               </div>
 
-              {saveMsg && !hasChanges && <div className="text-green-400 text-sm">{saveMsg}</div>}
+              {/* Save bar. It sticks to the bottom of the viewport while there
+                  are unsaved changes, because the settings tab is long enough
+                  that a button at its end is easy to miss. */}
+              <div className="sticky bottom-3 z-20 mt-4">
+                <div className="card flex flex-wrap items-center gap-3 border-white/10 bg-dark-800/95 backdrop-blur">
+                  <button
+                    onClick={saveProfile}
+                    disabled={!hasChanges || saving}
+                    className="btn-primary text-sm px-5 py-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {saving ? pt.savingBtn : pt.saveBtn}
+                  </button>
+                  {hasChanges && !saving && (
+                    <button onClick={resetForm} className="btn-secondary text-sm px-5 py-2.5">
+                      {pt.cancelBtn}
+                    </button>
+                  )}
+                  {saveMsg && (
+                    <div className={saveMsg.startsWith('✓') ? 'text-green-400 text-sm' : 'text-red-400 text-sm'}>
+                      {saveMsg}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="card mt-4">
