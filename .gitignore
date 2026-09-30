@@ -13,3 +13,4 @@ yarn-error.log*
 *.backup-*
 *.bak-*
 *.backup-*
+!.env.example
