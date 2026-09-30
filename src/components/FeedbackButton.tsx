@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/store';
 import { detectLocale, Locale } from '@/lib/i18n';
@@ -115,7 +116,12 @@ const FB_STR: Record<Locale, {
   },
 };
 
+// Kept broad on purpose: these cover every tournament id under the two
+// broadcast routes, unlike LiveBanner which builds its list from a known id.
+const HIDE_ON_PATH_PREFIXES = ['/live/', '/admin/live/'];
+
 export default function FeedbackButton() {
+  const pathname = usePathname();
   const { user } = useAuth();
   const [locale, setLocale] = useState<Locale>('ru');
   useEffect(() => { setLocale(detectLocale()); }, []);
@@ -172,6 +178,13 @@ export default function FeedbackButton() {
       setSubmitting(false);
     }
   };
+
+  // Broadcast routes are captured by OBS or shown on a projector, so a
+  // floating button in the corner would end up on air. Checked after the
+  // hooks above so their order stays the same on every render.
+  if (HIDE_ON_PATH_PREFIXES.some((prefix) => pathname?.startsWith(prefix))) {
+    return null;
+  }
 
   return (
     <>
