@@ -1,3 +1,10 @@
 node_modules
 .next
 .git
+
+# Local env and patch backups must not reach the image
+.env
+.env.*
+*.bak-*
+*.backup-*
+*.tar.gz
