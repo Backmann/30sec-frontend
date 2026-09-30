@@ -250,3 +250,31 @@
 .animate-bounce-once {
   animation: bounce-once 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
+
+/* ─── Landing: logo breathing and scroll hint ───
+   Both classes were already in use on the landing page while these keyframes
+   did not exist, so the elements simply sat still. */
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.02); }
+}
+.animate-breathe {
+  animation: breathe 5s ease-in-out infinite;
+}
+
+@keyframes bounce-soft {
+  0%, 100% { transform: translateY(0); opacity: 0.6; }
+  50%      { transform: translateY(4px); opacity: 1; }
+}
+.animate-bounce-soft {
+  animation: bounce-soft 1.8s ease-in-out infinite;
+}
+
+/* Respect a stated preference for reduced motion: these are decorative
+   loops, and a looping animation is exactly what that setting is about. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-breathe,
+  .animate-bounce-soft {
+    animation: none;
+  }
+}

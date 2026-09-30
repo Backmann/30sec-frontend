@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'https://30sec.org';
+import { getWsUrl } from '@/lib/ws';
 
 interface UseSocketOptions {
   tournamentId: string;
@@ -53,7 +53,7 @@ export function useSocket({ tournamentId, token, isAdmin }: UseSocketOptions) {
   });
 
   useEffect(() => {
-    const socket = io(WS_URL, { auth: { token: token || undefined }, transports: ['websocket', 'polling'] });
+    const socket = io(getWsUrl(), { auth: { token: token || undefined }, transports: ['websocket', 'polling'] });
     socketRef.current = socket;
 
     socket.on('connect', () => {

@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import ImageUploader, { UploadedImage } from '@/components/ImageUploader';
 import ImageLightbox from '@/components/ImageLightbox';
 import io from 'socket.io-client';
+import { getWsUrl } from '@/lib/ws';
 import ReorderableQuestions from '@/components/ReorderableQuestions';
 import PlayersTab from '@/components/PlayersTab';
 import FeedbackTab from '@/components/FeedbackTab';
@@ -57,9 +58,6 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [dashboard, setDashboard] = useState<any>(null);
   const [tournaments, setTournaments] = useState<any[]>([]);
-  const [answers, setAnswers] = useState<any[]>([]);
-  const [selT, setSelT] = useState<any>(null);
-  const [users, setUsers] = useState<any>(null);
   const [logs, setLogs] = useState<any>(null);
   const [mob, setMob] = useState(false);
   const [showTF, setShowTF] = useState(false);
@@ -70,13 +68,6 @@ export default function AdminPage() {
   const [fFrom, setFFrom] = useState(''); const [fTo, setFTo] = useState('');
   const [busy, setBusy] = useState('');
   const [now, setNow] = useState(Date.now());
-  // Judge state
-  const [judgeTimer, setJudgeTimer] = useState(0);
-  const [judgePhase, setJudgePhase] = useState<'idle' | 'reading' | 'answering' | 'judging'>('idle');
-  const [currentQ, setCurrentQ] = useState<any>(null);
-  const [judgeWs, setJudgeWs] = useState<any>(null);
-  const [undoTimer, setUndoTimer] = useState<{id: string; aid: string; sec: number} | null>(null);
-  const [judgeFilter, setJudgeFilter] = useState<'all' | 'unjudged' | 'judged'>('all');
 
   // Questions library state
   const [qSubtab, setQSubtab] = useState<'library' | 'byTournament' | 'archive'>('library');
@@ -156,39 +147,19 @@ export default function AdminPage() {
   const [qOnlyUnused, setQOnlyUnused] = useState(false);
   const [qSort, setQSort] = useState<'new' | 'old'>('new');
 
-  // Simple similarity check: normalize and compare
-  const checkSimilarity = (answer: string, correct: string): 'match' | 'close' | 'wrong' => {
-    if (!answer || !correct) return 'wrong';
-    const norm = (s: string) => s.toLowerCase().trim().replace(/[^a-zA-Z0-9\u0400-\u04FF]/g, '');
-    const a = norm(answer);
-    const c = norm(correct);
-    if (a === c) return 'match';
-    // Check if answer is contained in correct or vice versa
-    if (c.includes(a) || a.includes(c)) return 'close';
-    // Check Levenshtein-like: allow 1-2 char difference for short answers
-    if (a.length > 2 && c.length > 2) {
-      let matches = 0;
-      for (let i = 0; i < Math.min(a.length, c.length); i++) { if (a[i] === c[i]) matches++; }
-      if (matches / Math.max(a.length, c.length) > 0.7) return 'close';
-    }
-    return 'wrong';
-  };
-
   useEffect(() => { loadUser().then(() => setLoading(false)); }, []);
   useEffect(() => { if (!loading && (!user || !['ADMIN','SUPERADMIN'].includes(user.role))) router.push('/dashboard'); }, [loading, user]);
   useEffect(() => { const iv = setInterval(() => setNow(Date.now()), 10000); return () => clearInterval(iv); }, []);
   const refresh = useCallback(() => api.getTournaments().then(setTournaments).catch(() => {}), []);
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    const wsUrl = (process.env.NEXT_PUBLIC_API_URL || 'https://30sec.org/api').replace('/api', '');
-    const s = io(wsUrl, { auth: { token }, transports: ['websocket', 'polling'] });
+    const s = io(getWsUrl(), { auth: { token }, transports: ['websocket', 'polling'] });
     s.on('tournaments_updated', () => refresh());
     return () => { s.disconnect(); };
   }, [refresh]);
   useEffect(() => {
     if (tab === 'dashboard') api.getAdminDashboard().then(setDashboard).catch(() => {});
     if (['tournaments','questions'].includes(tab)) refresh();
-    if (tab === 'users') api.getAdminUsers().then(setUsers).catch(() => {});
     if (tab === 'logs') api.getAdminLogs().then(setLogs).catch(() => {});
   }, [tab, refresh]);
 
@@ -367,86 +338,6 @@ export default function AdminPage() {
       alert('Не удалось удалить: ' + (e.message || 'ошибка'));
     }
   };
-  const doJudge = async (aid: string, d: 'ACCEPTED' | 'REJECTED') => {
-    const result = await api.judgeAnswer(aid, d);
-    const jid = result?.judgement?.id;
-    // Reload answers
-    if (selT && currentQ) {
-      const updated = await api.getAnswersForQuestion(selT.id, currentQ.questionId);
-      setAnswers(updated);
-      const f = await api.getTournament(selT.id); setSelT(f);
-    }
-
-  };
-  const doUndo = async (judgementId?: string) => {
-    const jid = judgementId || (undoTimer ? undoTimer.id : null);
-    if (!jid) return;
-    try {
-      await api.undoJudgement(jid);
-      setUndoTimer(null);
-      if (selT && currentQ) {
-        const updated = await api.getAnswersForQuestion(selT.id, currentQ.questionId);
-        setAnswers(updated);
-        const f = await api.getTournament(selT.id); setSelT(f);
-      }
-    } catch (e: any) { alert(e.message); }
-  };
-
-  // Launch question with timer tracking
-  const doLaunch = async () => {
-    if (!selT) return;
-    setBusy('launch');
-    try {
-      const d = await api.launchQuestion(selT.id);
-      if (d.launched) {
-        // Find the question data
-        const f = await api.getTournament(selT.id);
-        setSelT(f);
-        const lastUsed = f.tournamentQuestions?.filter((tq: any) => tq.isUsed).pop();
-        setCurrentQ(lastUsed ? { questionId: lastUsed.questionId, orderIndex: lastUsed.orderIndex, question: lastUsed.question } : null);
-        setAnswers([]);
-        setJudgePhase('reading');
-        setJudgeTimer(20);
-        // Timer syncs via WS (question_started, phase_changed, timer_tick, question_locked)
-        // Auto-load answers when judging phase starts
-        if (d.questionId) { setTimeout(() => { api.getAnswersForQuestion(selT.id, d.questionId).then(setAnswers); }, 50000); }
-      }
-    } catch(e:any) { alert(e.message); }
-    setBusy('');
-  };
-
-  // Connect WS when selecting tournament in judge
-  const selectJudgeTournament = async (tid: string) => {
-    const f = await api.getTournament(tid); setSelT(f);
-    if (judgeWs) judgeWs.disconnect();
-    const tk = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    const wsUrl = (process.env.NEXT_PUBLIC_API_URL || 'https://30sec.org/api').replace('/api', '');
-    const ws = io(wsUrl, { auth: { token: tk }, transports: ['websocket', 'polling'] });
-    ws.on('connect', () => { ws.emit('join_admin', { tournamentId: tid }); ws.emit('join_tournament', { tournamentId: tid }); });
-    ws.on('answer_submitted', (d: any) => { setAnswers(p => p.some(a => a.id === d.answerId) ? p : [...p, { id: d.answerId, answerText: d.answerText || '(no answer)', user: { profile: { nickname: d.nickname } }, judgement: null }]); });
-    ws.on('question_started', () => { setJudgePhase('reading'); setJudgeTimer(20); });
-    ws.on('phase_changed', (d: any) => { if (d.phase === 'answering') { setJudgePhase('answering'); setJudgeTimer(d.seconds || 30); } });
-    ws.on('timer_tick', (d: any) => { setJudgeTimer(d.secondsLeft); if (d.phase) setJudgePhase(d.phase === 'answering' ? 'answering' : judgePhase); });
-    ws.on('question_locked', () => { setJudgePhase('judging'); });
-    setJudgeWs(ws);
-
-    // Restore game state
-    try {
-      const gs = await api.getGameState(tid);
-      if (gs && gs.currentQuestion) {
-        const lastUsed = f.tournamentQuestions?.filter((tq: any) => tq.isUsed).pop();
-        setCurrentQ(lastUsed ? { questionId: lastUsed.questionId, orderIndex: lastUsed.orderIndex, question: lastUsed.question } : null);
-        setAnswers(gs.allAnswers || []);
-        if (gs.phase === 'judging' || gs.phase === 'idle') { setJudgePhase('judging'); }
-        else if (gs.phase === 'answering') { setJudgePhase('answering'); setJudgeTimer(gs.timerSeconds); }
-        else if (gs.phase === 'reading') { setJudgePhase('reading'); setJudgeTimer(gs.timerSeconds); }
-        else { setJudgePhase('idle'); }
-      } else {
-        setAnswers([]); setJudgePhase('idle'); setCurrentQ(null);
-      }
-    } catch { setAnswers([]); setJudgePhase('idle'); setCurrentQ(null); }
-  };
-
   const wk = new Date(Date.now()-7*86400000).toISOString();
   const active = tournaments.filter(t => ['LIVE','SCHEDULED','DRAFT'].includes(t.status));
   const fin = tournaments.filter(t => { if (t.status !== 'FINISHED') return false; const d = t.endAt || t.createdAt; if (fFrom && new Date(d)<new Date(fFrom)) return false; if (fTo && new Date(d)>new Date(fTo+'T23:59:59')) return false; if (!fFrom && !fTo) return new Date(d)>new Date(wk); return true; });
@@ -456,14 +347,6 @@ export default function AdminPage() {
   const apprd = (t: any) => (t.participants || []).filter((p: any) => p.matchStatus === 'APPROVED' || p.matchStatus === 'PLAYING').length;
   const pend = (t: any) => (t.participants || []).filter((p: any) => p.matchStatus === 'PENDING');
   const canStart = (t: any) => qr(t) && (!t.startAt || now >= new Date(t.startAt).getTime()) && apprd(t) > 0;
-
-  // Judge: can launch next question?
-  const allJudged = answers.length > 0 && answers.every((a: any) => a.judgement);
-  const canLaunchNext = judgePhase === 'idle' || (judgePhase === 'judging' && allJudged);
-
-  // Current question info for judge
-  const currentQLocs = currentQ?.question?.localizations || [];
-  const correctAnswers = currentQLocs.map((l: any) => l.correctAnswerLocalized).filter(Boolean).join(' / ');
 
   return (
     <div className="min-h-screen bg-dark-900">

@@ -4,7 +4,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import io, { Socket } from 'socket.io-client';
 
-const WS_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/^http/, 'ws').replace('/api', '') || 'wss://30sec.org';
+import { getWsUrl } from '@/lib/ws';
 
 export default function PublicLivePage() {
   const params = useParams();
@@ -35,10 +35,10 @@ export default function PublicLivePage() {
   useEffect(() => {
     fetchState();
     // Connect to WebSocket for realtime updates (no auth required for public)
-    const socket = io(WS_URL, { path: '/socket.io', transports: ['websocket'] });
+    const socket = io(getWsUrl(), { path: '/socket.io', transports: ['websocket'] });
     socketRef.current = socket;
     socket.emit('join_tournament', { tournamentId });
-    const events = ['phase_changed', 'timer_tick', 'judgement_made', 'score_updated', 'question_launched', 'match_finished'];
+    const events = ['phase_changed', 'timer_tick', 'judgement_made', 'score_updated', 'question_started', 'match_finished'];
     events.forEach(ev => socket.on(ev, () => fetchState()));
     return () => { socket.emit('leave_tournament', { tournamentId }); socket.disconnect(); };
   }, [tournamentId]);

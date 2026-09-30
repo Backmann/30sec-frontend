@@ -5,7 +5,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/lib/store';
 import io, { Socket } from 'socket.io-client';
 
-const WS_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/^http/, 'ws') || 'wss://30sec.org';
+import { getWsUrl } from '@/lib/ws';
 
 export default function AdminLivePage() {
   const params = useParams();
@@ -91,13 +91,13 @@ export default function AdminLivePage() {
   useEffect(() => {
     if (!user) return;
     const token = localStorage.getItem('accessToken');
-    const socket = io(WS_URL, { path: '/socket.io', auth: { token }, transports: ['websocket'] });
+    const socket = io(getWsUrl(), { path: '/socket.io', auth: { token }, transports: ['websocket'] });
     socketRef.current = socket;
 
     socket.emit('join_tournament', { tournamentId });
 
     // Re-fetch on any meaningful event
-    const events = ['phase_changed', 'timer_tick', 'answer_submitted', 'judgement_made', 'score_updated', 'question_launched', 'match_finished'];
+    const events = ['phase_changed', 'timer_tick', 'answer_submitted', 'judgement_made', 'score_updated', 'question_started', 'match_finished'];
     events.forEach(ev => socket.on(ev, () => fetchState()));
 
     return () => {
