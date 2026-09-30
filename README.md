@@ -305,8 +305,9 @@ this as a promise:
   a model.
 - **No scheduler.** Delayed work is BullMQ only; queue entries carry a
   30-day TTL that nothing currently enforces.
-- **No automated tests** in either repository, and no OpenAPI/Swagger UI
-  despite the dependency being present.
+- **The web client has no tests.** The API does — see below — but nothing
+  covers the pages, and the pages are where most of this year's bugs were.
+- **No OpenAPI/Swagger UI**, despite the dependency being present.
 - **Push notifications** exist in the channel enum only. Delivery is in-app
   and e-mail.
 - Client pages are all client-rendered, so public pages are empty to
