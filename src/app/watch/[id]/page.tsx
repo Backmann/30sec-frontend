@@ -164,6 +164,7 @@ export default function WatchPage() {
         setMyAnswer('');
         setMyAnswerSaved(false);
         setSelectedReaction(null);
+        setReactionCounts([]);
         loadReactions(tq);
       }
     }
@@ -184,10 +185,12 @@ export default function WatchPage() {
 
   const loadReactions = async (questionId: string) => {
     try {
-      const data = await api.getReactionTypes();
-      // Load current reactions for this question
-      // The reactions endpoint uses tournamentId + questionId
-    } catch {}
+      const counts = await api.getReactions(tournamentId, questionId);
+      setReactionCounts(Array.isArray(counts) ? counts : []);
+    } catch {
+      // Counts are decoration; a failure here must not interrupt watching.
+      // The previous values simply stay on screen.
+    }
   };
 
   // Get localized question text
@@ -428,7 +431,7 @@ export default function WatchPage() {
                   {liveState?.participants
                     ?.sort((a: any, b: any) => b.scoreUser - a.scoreUser)
                     .map((p: any, idx: number) => {
-                      const wsScore = ws.scores.get(p.odUserId);
+                      const wsScore = ws.scores.get(p.userId);
                       const scoreUser = wsScore?.scoreUser ?? p.scoreUser;
                       const scoreSystem = wsScore?.scoreSystem ?? p.scoreSystem;
                       const status = wsScore?.matchStatus ?? p.matchStatus;

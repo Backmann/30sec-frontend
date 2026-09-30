@@ -512,6 +512,11 @@ class ApiClient {
 
   // ─── Reactions ────────────────────────────────
   async getReactionTypes() { return this.request<any[]>('/reactions/types'); }
+  async getReactions(tournamentId: string, questionId: string) {
+    return this.request<{ code: string; count: number }[]>(
+      `/reactions/${tournamentId}/${questionId}`,
+    );
+  }
   async setReaction(tournamentId: string, questionId: string, reactionCode: string) {
     return this.request<any>('/reactions', {
       method: 'POST', body: JSON.stringify({ tournamentId, questionId, reactionCode }),

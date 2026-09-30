@@ -24,11 +24,23 @@ export default function LoginPage() {
 
   useEffect(() => { setMounted(true); }, []);
 
+  // Where to go after signing in. Pages that require an account send people
+  // here with ?redirect=<path> so they land back where they were headed.
+  // Read from window rather than useSearchParams: that hook would force this
+  // page into a Suspense boundary. Only same-site paths are accepted — an
+  // absolute URL here would turn the login page into an open redirect.
+  const afterLogin = (): string => {
+    if (typeof window === 'undefined') return '/dashboard';
+    const target = new URLSearchParams(window.location.search).get('redirect');
+    if (!target || !target.startsWith('/') || target.startsWith('//')) return '/dashboard';
+    return target;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await login(email, password);
-      router.push('/dashboard');
+      router.push(afterLogin());
     } catch {}
   };
 
@@ -54,7 +66,7 @@ export default function LoginPage() {
   const handleGoogleResponse = async (response: any) => {
     try {
       await googleLogin(response.credential);
-      router.push('/dashboard');
+      router.push(afterLogin());
     } catch {}
   };
 

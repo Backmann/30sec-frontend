@@ -10,7 +10,9 @@ import HtmlLangSync from '@/components/HtmlLangSync';
 export const metadata: Metadata = {
   title: '30sec. — Intellectual Tournament',
   description: '30 seconds. One answer. Are you ready?',
-  icons: { icon: '/favicon.ico' },
+  // No `icons` entry on purpose: it used to point at /favicon.ico, which does
+  // not exist, and an explicit entry overrides convention. Next picks up
+  // src/app/icon.svg by itself and serves it at /icon.svg.
 };
 
 export const viewport: Viewport = {

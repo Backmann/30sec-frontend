@@ -223,7 +223,7 @@ export default function VotePage() {
 
   const vote = async (questionId: string, questionText: string) => {
     if (!token) {
-      router.push('/login?redirect=' + encodeURIComponent(`/vote/${tournamentId}`));
+      router.push('/auth/login?redirect=' + encodeURIComponent(`/vote/${tournamentId}`));
       return;
     }
     const wasVoted = myVote;
@@ -287,7 +287,7 @@ export default function VotePage() {
         title: vt.signInToVoteTitle,
         text: vt.signInToVoteText(results.hoursLeft),
         bg: 'from-amber-500/10 to-transparent border-amber-500/30',
-        action: { label: vt.signInButton, onClick: () => router.push('/login?redirect=' + encodeURIComponent(`/vote/${tournamentId}`)) },
+        action: { label: vt.signInButton, onClick: () => router.push('/auth/login?redirect=' + encodeURIComponent(`/vote/${tournamentId}`)) },
       };
     }
     if (myVote) return null; // Sticky bar shows current vote
