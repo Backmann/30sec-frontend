@@ -22,24 +22,6 @@ jobs:
             cd /root/30sec-frontend
             echo "-> Pulling latest code..."
             git pull origin main
-            cd /root/30sec
-
-
-            echo "-> Rebuilding and starting frontend container..."
-            docker compose up -d --build --force-recreate --no-deps frontend
-
-            echo "-> Waiting for health check (up to 90s)..."
-            for i in 1 2 3 4 5 6 7 8 9; do
-              sleep 10
-              STATUS=$(docker inspect --format="{{.State.Health.Status}}" 30sec-frontend 2>/dev/null || echo "missing")
-              echo "   [attempt $i/9] status: $STATUS"
-              if [ "$STATUS" = "healthy" ]; then
-                echo "OK: Frontend is healthy! Reloading nginx..."
-                docker restart 30sec-nginx && sleep 3
-                exit 0
-              fi
-            done
-
-            echo "FAIL: Frontend did not become healthy in time"
-            docker compose logs frontend --tail 50
-            exit 1
+            # Build, health wait, smoke checks and rollback live in the
+            # repository so they can be reviewed and tested — see the file.
+            sh scripts/deploy-frontend.sh
