@@ -1,0 +1,39 @@
+# Weekly update proposals, each as a pull request that CI tests before
+# anyone merges it. Nothing is merged automatically.
+#
+# Major versions are ignored on purpose. They are decisions, not routine:
+# Node 26 waits for the API (Prisma) to support it; Next 15+/React 19
+# need code changes and are planned, not routine.
+# Security fixes are not affected by these ignores — Dependabot security
+# updates are configured in the repository settings, not here.
+version: 2
+updates:
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    ignore:
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ["*"]
