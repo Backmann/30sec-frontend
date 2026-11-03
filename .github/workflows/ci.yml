@@ -1,0 +1,44 @@
+name: CI
+
+# Runs on every pull request, before anything reaches the server.
+#
+# The project has no unit tests, so the build is the test: `next build` type-
+# checks and lints, and then the production image is started and smoke-checked
+# (scripts/smoke.mjs) — public pages render on the server, and the static
+# files they reference are actually in the image. Same Dockerfile, same base
+# image (Alpine/musl) as production.
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Production image builds (type-check and lint included)
+        run: docker build -t 30sec-frontend-ci .
+
+      - name: Start the image
+        run: |
+          docker run -d --name fe -p 127.0.0.1:3001:3001 30sec-frontend-ci
+          for i in $(seq 1 30); do
+            curl -sf -o /dev/null http://127.0.0.1:3001/ && exit 0
+            sleep 1
+          done
+          echo "frontend did not answer within 30s"; docker logs fe; exit 1
+
+      - name: Smoke checks
+        run: |
+          docker run --rm --network host -v "$PWD/scripts:/scripts:ro" \
+            --entrypoint node 30sec-frontend-ci /scripts/smoke.mjs http://127.0.0.1:3001
+
+      - name: Node version inside the production image
+        run: docker run --rm --entrypoint node 30sec-frontend-ci -v
+
+      - name: Container log on failure
+        if: failure()
+        run: docker logs fe || true
